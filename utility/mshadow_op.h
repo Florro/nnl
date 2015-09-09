@@ -58,6 +58,24 @@ struct addconst {
   }
 };
 
+struct square {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return a * a;
+  }
+};
+
+struct square_root {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    return sqrt(a);
+  }
+};
+
+struct power {
+  MSHADOW_XINLINE static real_t Map(real_t a, real_t b) {
+    return powf( a, b );
+  }
+};
+
 real_t save_log(real_t val){
 	if(val <= 0.00000000001){
 		return logf(0.00000000001);

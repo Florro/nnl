@@ -9,7 +9,8 @@
  * 14) dynamic datastream
  * 17) img to bin
  * 18) background image solution for different colors
- *
+ * 19) in batchsizechanged activations seem not to be freed, just allocated again !!!
+ * 20) try 2D conv kernel
  */
 
 /* NOTES

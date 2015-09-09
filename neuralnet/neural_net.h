@@ -20,6 +20,7 @@
 #include "../updater/updater.h"
 #include "configurator.h"
 #include "../updater/UpdaterParameter.h"
+#include "../io/modelstate.h"
 
 // this namespace contains all data structures, functions
 using namespace mshadow;
@@ -38,6 +39,9 @@ class INNet{
   virtual int get_max_epoch() = 0;
   virtual void save_activations(int n_layer, std::string outputfile ) = 0;
   virtual int get_outputdim() = 0;
+
+  virtual void Sync() = 0;
+  virtual void save_weights(std::string outputfile) = 0;
   virtual ~INNet(){};
 };
 
@@ -112,6 +116,16 @@ class ConvNet : public INNet {
 	  for(unsigned i = 0; i < architecture_.size(); i++){
 		architecture_[i]->onBatchSizeChanged( batch_size );
 	  }
+  }
+
+  //Perform pseudo update for sync purposes
+  virtual void Sync(){
+	for(unsigned i = 0; i < architecture_.size(); i++){
+		//Wait until syncing with server completed
+		for(unsigned j = 0; j < async_updaters_[i].size(); j++){
+			async_updaters_[i][j]->UpdateWait();
+		}
+	}
   }
 
   // forward propagation
@@ -231,6 +245,16 @@ class ConvNet : public INNet {
       }
 	  outputstream.close();
 	  }
+  }
+
+  //save activations in layer n_layer to file
+  virtual void save_weights(std::string outputfile ){
+
+	  for(int i = 0; i < architecture_.size(); i++){
+		  modelstate::save_weights(architecture_[i],i);
+	  }
+
+
   }
 
 

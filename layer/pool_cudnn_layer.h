@@ -29,7 +29,8 @@ public:
 	};
 	std::string getType(){		return "pool";	}
 	int getParamSize(){		return (0 );	}
-
+	void feedforward(bool){}
+	void backpropagate(){}
 	~pool_cudnn_layer(){};
 
 private:
@@ -112,6 +113,7 @@ public:
 		// copy into temps
 		Copy(pooltmp_, activations_.data, stream_);
 
+
 		/*
 		TensorContainer<cpu, 4, real_t> data;
 		data.Resize(activations_.data.shape_);
@@ -124,13 +126,8 @@ public:
 			std::cout << std::endl;
 		}
 		std::cout << "tens1" << std::endl;
+		*/
 
-
-		int a;
-		std::cin >> a;
-		std::cin.clear();
-		std::cin.ignore(INT_MAX,'\n');
-		 */
 	 }
 
 	void backpropagate(void){

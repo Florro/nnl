@@ -26,6 +26,8 @@ public:
 	std::string getType(){		return "conv";	}
 	int getParamSize(){		return (0 );	}
 	~Conv_cudnn_layer(){}
+	void backpropagate(){};
+	void feedforward(bool){};
 	Node<xpu>* getpAct(void){
 		return &activations_;
 	};
@@ -47,6 +49,7 @@ public:
 			inputLayer_(inputLayer), ksize_(ksize), kstride_(kstride), nchannel_(nchannel),
 			pad_x_(pad), pad_y_(pad),
 			weightInit_(weightInit),
+			kernel_(false), bias_(false), gkernel_(false), gbias_(false),
 			backPropError_(true) {}
 
 
@@ -83,7 +86,8 @@ public:
 		kernel_.set_stream(stream);  gkernel_.set_stream(stream);
 		bias_.set_stream(stream); gbias_.set_stream(stream);
 
-		kernel_.Resize(Shape3(nchannel_, inputLayer_->getpAct()->data.size(1), ksize_ * ksize_ ));  gkernel_.Resize(kernel_.shape_);
+		kernel_.Resize(Shape4(nchannel_, inputLayer_->getpAct()->data.size(1), ksize_ , ksize_ ));  gkernel_.Resize(kernel_.shape_);
+
 
 		// setup bias
 		bias_.Resize(Shape1(nchannel_)); gbias_.Resize(bias_.shape_);
@@ -94,7 +98,7 @@ public:
 		//init weights
 		if(weightInit_ == 0.0f){
 			//Xavier initalization
-			real_t a = sqrt(3.0f / (kernel_.size(2) + kernel_.size(1)));
+			real_t a = sqrt(1.0f / (kernel_.size(2) + kernel_.size(1) + kernel_.size(3)));
 			rnd.SampleUniform(&kernel_, -a, a);
 		}else{
 			//Gaussian
@@ -311,7 +315,7 @@ public:
 	 	return "conv";
 	 }
 	 int getParamSize(){
-	 	return ( kernel_.size(0) * kernel_.size(1) * kernel_.size(2)  + bias_.size(0));
+	 	return ( kernel_.size(0) * kernel_.size(1) * kernel_.size(2) * kernel_.size(3)  + bias_.size(0));
 	 }
 
 
@@ -324,7 +328,7 @@ private:
   real_t weightInit_;
 
   // weight, gradient: kernel_ is actually convoltuion kernel
-  TensorContainer<gpu, 3, real_t> kernel_,  gkernel_;
+  TensorContainer<gpu, 4, real_t> kernel_,  gkernel_;
   TensorContainer<gpu, 1, real_t> bias_, gbias_;
 
   bool backPropError_;

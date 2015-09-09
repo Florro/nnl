@@ -25,6 +25,7 @@
 #include "../layer/conv_layer.h"
 #include "../layer/conv_cudnn_layer.h"
 #include "../layer/softmax_layer.h"
+#include "../layer/batchnorm_layer.h"
 
 #include "mshadow/tensor.h"
 #include "../utility/mshadow_op.h"
@@ -373,6 +374,23 @@ void setDropoutLayer(std::vector < std::pair <std::string, std::string > > &cfg,
 }
 
 template<typename xpu>
+void setBatchNormLayer(std::vector < std::pair <std::string, std::string > > &cfg, int &i, std::vector< ILayer<xpu>* > &architecture, mshadow::Stream<xpu> *stream, Random<xpu, real_t> &rnd){
+
+	const char *name = "empty";
+	const char *val = "empty";
+
+	i++;
+	while(getpair(name, val, cfg[i])){
+		utility::Error("Unknown Dropout Layer Parameter: %s", name);
+		i++;
+	}
+
+	architecture.push_back(new batchnorm_layer<xpu, false>(architecture.back()));
+	architecture.back()->InitLayer(stream,rnd);
+	i--;
+}
+
+template<typename xpu>
 void setPoolingLayer(std::vector < std::pair <std::string, std::string > > &cfg, int &i, std::vector< ILayer<xpu>* > &architecture, mshadow::Stream<xpu> *stream, Random<xpu, real_t> &rnd){
 
 	int window_sl = 3;
@@ -508,7 +526,11 @@ void readNetConfig(std::vector < std::pair <std::string, std::string > > &cfg, s
 				}
 				else if(!strcmp(val, "Pooling")){
 					setPoolingLayer<xpu>(cfg, i, architecture, stream, rnd);
-				}else{
+				}
+				else if (!strcmp(val, "Batchnorm")){
+					setBatchNormLayer<xpu>(cfg,i, architecture, stream, rnd);
+				}
+				else{
 					utility::Error("Unknown Layer Type: ", val);
 				}
 			}else if(!strcmp(name, "Loss")){

@@ -28,7 +28,7 @@ class nntrainer{
 public:
 
 	nntrainer(int argc, char *argv[], std::string net):
-		  myIA_(NULL), logfile_(net + "/loss.log") {
+		  myIA_(NULL), logfile_(net + "/loss.log"), net_(net) {
 
 		  ndev_ = argc - 2;
 		  // choose which version to use
@@ -43,7 +43,7 @@ public:
 		  for (int i = 0; i < ndev_; ++i) {
 		     mshadow::InitTensorEngine<xpu>(devs_[i]);
 		     nets_[i] = new ConvNet<xpu>(devs_[i], ps_);
-		     nets_[i]->set_architecture(net + "/config.conf");
+		     nets_[i]->set_architecture(net_ + "/config.conf");
 
 		  }
 		  nets_[0]->display_dim();
@@ -137,7 +137,7 @@ public:
 		  dataBatchLoader trainDataLoader(train_path, 10000, true);
 		  dataBatchLoader testDataLoader(test_path, 10000, false);
 
-		  for (int i = 0; i < epochs; ++ i){
+		  for (int i = 0; i <= epochs; ++ i){
 
 			  int b = 1;
 			  while ( !trainDataLoader.finished() ) {
@@ -200,6 +200,14 @@ public:
 			  printf("%.2f%% ", (1.0 - (real_t)nerr/testDataLoader.fullSize())*100);
 			  printf("logloss %.4f\n", (-(real_t)logloss/testDataLoader.fullSize()));
 			  utility::write_val_to_file< float >(logfile_.c_str(), -(real_t)logloss/testDataLoader.fullSize());
+
+
+			  if(i == epochs){
+				  nets_[0]->Sync();
+				  nets_[0]->save_weights("");
+				  std::string holdoutfile = net_ + "/holdout_";
+				  this->write_acts(testDataLoader.X(), holdoutfile);
+			  }
 
 		  }
 
@@ -283,9 +291,7 @@ public:
 		  for (index_t j = 0; j + step <= xtest.size(0); j += step) {
 				nets_[0]->Forward(xtest.Slice(j, j + step), pred, false);
 				//Save activations
-				nets_[0]->save_activations(17, outputfile+"softmax.csv");
-				nets_[0]->save_activations(15, outputfile+"activations15.csv");
-				//nets_[0]->save_activations(15, outputfile+"activations14.csv");
+				nets_[0]->save_activations(22, outputfile+"softmax.csv");
 		  }
 	}
 
@@ -304,6 +310,7 @@ private:
 	ImageAugmenter* myIA_;
 	mshadow::ps::ISharedModel<xpu, real_t> *ps_;
 	int ndev_;
+	std::string net_;
 	std::vector<int> devs_;
 	std::vector<INNet *> nets_;
 	TensorContainer<cpu, 4, real_t> xtrain_augmented_;

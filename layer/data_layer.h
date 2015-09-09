@@ -36,6 +36,7 @@ public:
 		activations_.data = activations_.data / 256.0f; //toDo HARDCODE
 	}
 
+	void backpropagate(){}
 
 	void InitLayer(mshadow::Stream<xpu> *stream, Random<xpu, real_t> &rnd){
 		activations_.set_stream(stream);

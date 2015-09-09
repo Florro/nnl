@@ -114,8 +114,8 @@ class ILayer{
 public:
 
 	virtual void InitLayer(mshadow::Stream<xpu> *stream, Random<xpu, real_t> &rnd) {};
-	virtual void feedforward(bool is_train) {};
-	virtual void backpropagate(void) {};
+	virtual void feedforward(bool is_train) = 0;
+	virtual void backpropagate(void) = 0;
 	virtual void ApplyVisitor( IVisitor<xpu> *pvisitor ) {}
 	virtual void setBackpropError(bool backpropError){};
 	virtual Node<xpu>* getpAct(void) = 0;
