@@ -79,7 +79,8 @@ private:
 	unsigned int mNumBatches;				// number of data-reads
 
 
-	std::vector< std::string > mImglst;		// Train and test data-path lists
+	std::vector < std::pair < int, std::string > > mImglst; // Train and test labels and datapath lists
+
 
 	TensorContainer<cpu, 4, real_t> mX;		// Train and testdata container
 
@@ -97,7 +98,9 @@ dataBatchLoader::dataBatchLoader(const std::string & lst_path, const unsigned in
 	mNumChannels = 1;
 
 	// Read image-lists and determine complete datasize
-	utility::load_data_list_retina_nolabels(lst_path.c_str(), mImglst);
+	utility::load_data_list(lst_path.c_str(), mImglst);
+
+
 
 	mSize = mImglst.size();
 	mBatchSize = std::min(batchSize, mSize);
@@ -132,7 +135,6 @@ void dataBatchLoader::readBatch(void) {
 
 		// Copy batch-labels into mY
 		// Load batch-images into mX and batch-labels into mY
-		//utility::LoadImages( mX, mImglst, mReadPos, size, 3);
 		utility::Load_Images_Labels( mX, mY, mImglst, mReadPos, size, mNumChannels);
 
 		// increment counters

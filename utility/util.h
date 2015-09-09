@@ -143,48 +143,23 @@ void write_vec_to_file(const char* outputfile, std::vector< T > &data){
 
 }
 
-void load_data_list_withlabels(const char* filename, std::vector< int > &labels, std::vector< std::string > &img_location){
+
+void load_data_list(const char* filename, std::vector < std::pair < int, std::string > > &img_location){
       std::ifstream dataSet (filename, std::ios::in);
       assert(dataSet);
       while (dataSet)
       {
         std::string s;
         if (!std::getline( dataSet, s )) break;
-
-        std::istringstream ss( s );
-        int count = 0;
-        while (ss)
-        {
-          std::string s;
-          if (!getline( ss, s, '\t' )) break;
-          if(count % 3 == 0){	  }
-          else if (count % 2 == 0) { labels.push_back(atoi(s.c_str())); }
-          else if (count % 2 == 1) { img_location.push_back(s); }
-          count++;
-
-        }
-      }
-      dataSet.close();
-}
-
-
-void load_data_list_retina_nolabels(const char* filename, std::vector< std::string > &img_location){
-      std::ifstream dataSet (filename, std::ios::in);
-      assert(dataSet);
-      while (dataSet)
-      {
-        std::string s;
-        std::string tmp = "";
-        if (!std::getline( dataSet, s )) break;
-
+        std::pair < int, std::string > tmp;
         std::istringstream ss( s );
         int count = 0;
         while (ss)
         {
           std::string s;
           if (!getline( ss, s, ',' )) break;
-          else if ( count % 2 == 0 ) tmp = s.c_str() + std::string(",");
-		  else if ( count % 2 == 1 ) tmp += s;
+          else if ( count % 2 == 0 ) tmp.first = atoi(s.c_str());
+		  else if ( count % 2 == 1 ) tmp.second = s;
           count++;
         }
         img_location.push_back(tmp);
@@ -232,19 +207,15 @@ void LoadImages( TensorContainer<cpu, 4, real_t> &xdata, vector<string> &img_loc
 
 }
 
-void Load_Images_Labels( TensorContainer<cpu, 4, real_t> & xdata, std::vector< int > & ydata, vector<string> &img_locations_labels, const unsigned int & start, const unsigned int & size, const int & nchannels){
+void Load_Images_Labels( TensorContainer<cpu, 4, real_t> & xdata, std::vector< int > & ydata, std::vector < std::pair < int, std::string > > imglst, const unsigned int & start, const unsigned int & size, const int & nchannels){
 
 		for (unsigned i = 0; i < size; i++){
 
 			//load label
-			std::istringstream ss( img_locations_labels[start + i] );
-			std::string s;
-			getline( ss, s, ',' );
-			ydata.push_back(atoi(s.c_str()));
-			getline( ss, s, ',' );
+			ydata.push_back(imglst[start + i].first);
 
 			//load image
-			cv::Mat img = cv::imread( (char*)s.c_str(), cv::IMREAD_COLOR );
+			cv::Mat img = cv::imread( imglst[start + i].second, cv::IMREAD_COLOR );
 
 			if(false){
 				cv::namedWindow( "pic" );

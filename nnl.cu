@@ -52,56 +52,6 @@ void read_data_mnist( TensorContainer<cpu, 4, real_t> &xtrain,  TensorContainer<
 	 xtest = reshape(xtest_, xtest.shape_);
 }
 
-/*
-void read_data_plankton( TensorContainer<cpu, 4, real_t> &xtrain,  TensorContainer<cpu, 4, real_t> &xtest,
-		std::vector<int> &ytrain, std::vector<int> &ytest){
-	 // settings
-	 int insize = 96;
-	 srand(0);
-
-
-	 std::vector< std::string > imglst_train;
-	 std::vector< std::string > imglst_test;
-	 utility::load_data_list("/home/niklas/CXX/conv_dist_NNL2/data/plankton/train.lst", ytrain, imglst_train);
-	 utility::load_data_list("/home/niklas/CXX/conv_dist_NNL2/data/plankton/test.lst", ytest, imglst_test);
-
-
-	 xtrain.Resize(Shape4(imglst_train.size(), 1, insize, insize));
-	 xtest.Resize(Shape4(imglst_test.size(),  1, insize, insize));
-
-	 utility::LoadImages( xtrain, imglst_train, 1);
-	 utility::LoadImages( xtest, imglst_test,   1);
-
-	 std::cout << "#Train Pictures: " << xtrain.size(0) << std::endl;
-	 std::cout << "#Test  Pictures: " << xtest.size(0) << std::endl;
-
-
-}
-
-
-void read_data_retina( TensorContainer<cpu, 4, real_t> &xtrain,  TensorContainer<cpu, 4, real_t> &xtest,
-		std::vector<int> &ytrain, std::vector<int> &ytest){
-	 // settings
-	 int insize = 128;
-	 srand(0);
-
-	 std::vector< std::string > imglst_train;
-	 std::vector< std::string > imglst_test;
-	 utility::load_data_list_retina("/home/niklas/CXX/conv_dist_NNL2/data/retina/128_custom_3class/train.lst", ytrain, imglst_train);
-	 utility::load_data_list_retina("/home/niklas/CXX/conv_dist_NNL2/data/retina/128_custom_3class/test.lst", ytest, imglst_test);
-
-	 xtrain.Resize(Shape4(imglst_train.size(), 3, insize, insize));
-	 xtest.Resize(Shape4(imglst_test.size(),  3, insize, insize));
-
-	 utility::LoadImages( xtrain, imglst_train, 3);
-	 utility::LoadImages( xtest, imglst_test,   3);
-
-	 std::cout << "#Train Pictures: " << xtrain.size(0) << std::endl;
-	 std::cout << "#Test  Pictures: " << xtest.size(0) << std::endl;
-
-}
-*/
-
 // multithreaded run routine
 template<typename xpu>
 inline int Run(int argc, char *argv[]) {
