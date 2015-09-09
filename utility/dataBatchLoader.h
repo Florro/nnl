@@ -100,8 +100,6 @@ dataBatchLoader::dataBatchLoader(const std::string & lst_path, const unsigned in
 	// Read image-lists and determine complete datasize
 	utility::load_data_list(lst_path.c_str(), mImglst);
 
-
-
 	mSize = mImglst.size();
 	mBatchSize = std::min(batchSize, mSize);
 

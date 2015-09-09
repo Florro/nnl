@@ -76,7 +76,6 @@ public:
 			  xtrain_augmented_ = xtrain;
 		  }
 
-
 		  // running parallel threads
 		  #pragma omp parallel num_threads(ndev_)
 		  {
@@ -144,14 +143,14 @@ public:
 
 				  // Load databatch from disk
 				  trainDataLoader.readBatch();
-
 				  xtrain_augmented_.Resize(trainDataLoader.X().shape_);
 
 				  if(augment_data){
 				  std::cout << "aug ";
 					  for(int a = 0; a < trainDataLoader.X().size(0); a++){
-						  Copy(xtrain_augmented_[a], myIA_->distort_img(trainDataLoader.X()[a]));
-						  //myIA_->compare_img(xtrain[a], xtrain_augmented_[a]);
+						  trainDataLoader.X()[a] = myIA_->distort_img(trainDataLoader.X()[a]);
+						  Copy(xtrain_augmented_[a],myIA_->distort_img(trainDataLoader.X()[a]));
+						  //myIA_->display_img( xtrain_augmented_[a]);
 					  }
 				  }else{
 					  xtrain_augmented_ = trainDataLoader.X();

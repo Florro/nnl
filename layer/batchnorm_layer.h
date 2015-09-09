@@ -14,11 +14,9 @@
 template<typename xpu, bool moving_avg>
 class batchnorm_layer : public ILayer<xpu> {
  public:
-  batchnorm_layer(ILayer<xpu>* inputLayer) : inputLayer_(inputLayer){
-    init_slope_ = 1.0f;
-    init_bias_ = 0.0f;
-    eps_ = 1e-10f;
-    bn_momentum_ = 0.9f;
+  batchnorm_layer(ILayer<xpu>* inputLayer, real_t init_slope, real_t init_bias, real_t eps, real_t bn_momentum) :
+	  inputLayer_(inputLayer), init_slope_(init_slope), init_bias_(init_bias), eps_(eps), bn_momentum_(bn_momentum){
+
   }
 
   virtual void ApplyVisitor(IVisitor<xpu> *pvisitor) {

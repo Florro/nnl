@@ -62,9 +62,9 @@ public:
 		cv::Mat res(data.size(1), data.size(2), CV_8UC3);
 		for (index_t i = 0; i < data.size(1); ++i) {
 		  for (index_t j = 0; j < data.size(2); ++j) {
-			res.at<cv::Vec3b>(i, j)[0] = data[0][i][j] * 256;
-			res.at<cv::Vec3b>(i, j)[1] = data[0][i][j] * 256;
-			res.at<cv::Vec3b>(i, j)[2] = data[0][i][j] * 256;
+			res.at<cv::Vec3b>(i, j)[0] = data[0][i][j];
+			res.at<cv::Vec3b>(i, j)[1] = data[0][i][j];
+			res.at<cv::Vec3b>(i, j)[2] = data[0][i][j];
 		  }
 		}
 
@@ -155,8 +155,8 @@ public:
 			for (index_t i = 0; i < data.size(1); ++i) {
 			  for (index_t j = 0; j < data.size(2); ++j) {
 				res.at<cv::Vec3b>(i, j)[0] = data[0][i][j];
-				res.at<cv::Vec3b>(i, j)[1] = data[1][i][j];
-				res.at<cv::Vec3b>(i, j)[2] = data[2][i][j];
+				res.at<cv::Vec3b>(i, j)[1] = data[0][i][j];
+				res.at<cv::Vec3b>(i, j)[2] = data[0][i][j];
 			  }
 			}
 
@@ -168,9 +168,11 @@ public:
 			for (index_t i = 0; i < tmpres.size(1); ++i) {
 			  for (index_t j = 0; j < tmpres.size(2); ++j) {
 				cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
-				tmpres[2][i][j] = (float)bgr[2];
-				tmpres[1][i][j] = (float)bgr[1];
 				tmpres[0][i][j] = (float)bgr[0];
+				if(data.size(0) == 3){
+					tmpres[1][i][j] = (float)bgr[1];
+					tmpres[2][i][j] = (float)bgr[2];
+				}
 			  }
 			}
 
@@ -254,7 +256,7 @@ private:
 	    cv::Mat trans = A2 * (T * S * (R * A1));
 
 	    // Apply matrix transformation
-	    cv::warpPerspective(input, output, trans, input.size(), INTERPOL, BORDER, cv::Scalar(0,0,0));
+	    cv::warpPerspective(input, output, trans, input.size(), INTERPOL, BORDER, cv::Scalar(256,256,256));
 
 	 }
 

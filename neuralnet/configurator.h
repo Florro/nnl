@@ -376,16 +376,39 @@ void setDropoutLayer(std::vector < std::pair <std::string, std::string > > &cfg,
 template<typename xpu>
 void setBatchNormLayer(std::vector < std::pair <std::string, std::string > > &cfg, int &i, std::vector< ILayer<xpu>* > &architecture, mshadow::Stream<xpu> *stream, Random<xpu, real_t> &rnd){
 
+    real_t init_slope = 1.0f;
+    real_t init_bias = 0.0f;
+    real_t eps = 1e-10f;
+    real_t bn_momentum = 0.9f;
+
+
 	const char *name = "empty";
 	const char *val = "empty";
 
 	i++;
 	while(getpair(name, val, cfg[i])){
-		utility::Error("Unknown Dropout Layer Parameter: %s", name);
+		if(!strcmp(name, "init_slope")){
+			init_slope = atof(val);
+			utility::Check(init_slope > 0, "batch norm init slope must be positiv");
+		}
+		else if(!strcmp(name, "bias")){
+			init_bias = atof(val);
+		}
+		else if(!strcmp(name, "eps")){
+			eps = atof(val);
+			utility::Check(eps > 0, "batch norm epsilon must be positiv");
+		}
+		else if(!strcmp(name, "momentum")){
+			bn_momentum = atof(val);
+			utility::Check(bn_momentum > 0 && bn_momentum < 1, "batch norm momentum must be between 0 and 1");
+		}
+		else{
+			utility::Error("Unknown Dropout Layer Parameter: %s", name);
+		}
 		i++;
 	}
 
-	architecture.push_back(new batchnorm_layer<xpu, false>(architecture.back()));
+	architecture.push_back(new batchnorm_layer<xpu, false>(architecture.back(), init_slope,  init_bias,  eps,  bn_momentum));
 	architecture.back()->InitLayer(stream,rnd);
 	i--;
 }

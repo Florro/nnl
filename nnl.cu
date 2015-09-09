@@ -86,7 +86,7 @@ inline int Run(int argc, char *argv[]) {
 
   //train routine
   double wall0 = get_wall_time();
-  mynntrainer->trainvalidate_batchwise( train_path , test_path, false );
+  mynntrainer->trainvalidate_batchwise( train_path , test_path, true );
   double wall1 = get_wall_time();
 
   std::cout << "\nWall Time = " << wall1 - wall0 << std::endl;
