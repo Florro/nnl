@@ -12,7 +12,7 @@ export NVCCFLAGS = -O3 --use_fast_math -ccbin $(CXX) $(MSHADOW_NVCCFLAGS) -lcudn
 BIN =
 OBJ =
 CUOBJ =
-CUBIN = dist_conv_NNL
+CUBIN = nnl
 .PHONY: clean all
 
 all: $(BIN) $(OBJ) $(CUBIN) $(CUOBJ)
@@ -32,4 +32,4 @@ $(CUBIN) :
 clean:
 	$(RM) $(OBJ) $(BIN) $(CUBIN) $(CUOBJ) *~
 
-dist_conv_NNL: dist_conv_NNL.cu
+nnl: nnl.cu
