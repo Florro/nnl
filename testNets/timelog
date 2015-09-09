@@ -1,0 +1,28 @@
+old
+Wall Time = 209.56599
+
+new 2
+Wall Time = 131.215
+
+new 1
+Wall Time = 245.282
+
+
+
+0.	data	1 x 28 x 28
+1.	conv	64 x 26 x 26
+2.	act 	64 x 26 x 26
+3.	conv	128 x 24 x 24
+4.	act 	128 x 24 x 24
+5.	pool	128 x 12 x 12
+6.	conv	256 x 10 x 10
+7.	act 	256 x 10 x 10
+8.	pool	256 x 5 x 5
+9.	flat	1 x 1 x 6400
+10.	full	1 x 1 x 400
+11.	act 	1 x 1 x 400
+12.	drop	1 x 1 x 400
+13.	full	1 x 1 x 400
+14.	act 	1 x 1 x 400
+15.	drop	1 x 1 x 400
+16.	full	1 x 1 x 10
