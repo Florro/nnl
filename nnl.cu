@@ -57,12 +57,9 @@ template<typename xpu>
 inline int Run(int argc, char *argv[]) {
 
 
-  TensorContainer<cpu, 4, real_t> xtrain;
-  TensorContainer<cpu, 4, real_t> xtest;
-  std::vector<int> ytrain, ytest;
-
   std::string train_path;
   std::string test_path;
+
 
   //choose data:
   int data = 1; //0 MNIST, 1 Plankton, 2 retina
@@ -70,31 +67,31 @@ inline int Run(int argc, char *argv[]) {
   std::vector< std::string > imglst_train;
 
   //generate nn trainer
-  std::string config;
+  std::string net;
+
   if(data == 0){
-	  read_data_mnist(xtrain, xtest, ytrain, ytest);
-	  config = "/home/niklas/CXX/conv_dist_NNL2/testNets/mnist.conf";
+	  //net = "/home/niklas/CXX/nnl/testNets/mnist/net1";
+	  //read_data_mnist(xtrain, xtest, ytrain, ytest);
   }else if (data == 1){
-	  config = "/home/niklas/CXX/conv_dist_NNL2/testNets/plankton.conf";
-	  train_path = "/home/niklas/CXX/conv_dist_NNL2/data/plankton/trainnew.lst";
-	  test_path = "/home/niklas/CXX/conv_dist_NNL2/data/plankton/testnew.lst";
+	  net = "/home/niklas/CXX/nnl/testNets/plankton/net1";
+	  train_path = "/home/niklas/CXX/nnl/data/plankton/trainnew.lst";
+	  test_path = "/home/niklas/CXX/nnl/data/plankton/testnew.lst";
   }else if (data == 2){
 	  //imglst_train = read_data_retina_batch(xtest, ytrain, ytest);
 	  //read_data_retina(xtrain, xtest, ytrain, ytest);
 	  //config = "/home/niklas/CXX/conv_dist_NNL2/testNets/retina_learning_3class_test.conf";
   }
-  nntrainer<xpu>* mynntrainer = new nntrainer<xpu>(argc, argv, config);
+  nntrainer<xpu>* mynntrainer = new nntrainer<xpu>(argc, argv, net);
 
   //train routine
   double wall0 = get_wall_time();
-  mynntrainer->trainvalidate_batchwise( train_path , test_path, false);
+  mynntrainer->trainvalidate_batchwise( train_path , test_path, false );
   double wall1 = get_wall_time();
 
   std::cout << "\nWall Time = " << wall1 - wall0 << std::endl;
 
   return 0;
 }
-
 
 
 

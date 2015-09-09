@@ -27,8 +27,8 @@ template<typename xpu>
 class nntrainer{
 public:
 
-	nntrainer(int argc, char *argv[], std::string config):
-		  myIA_(NULL){
+	nntrainer(int argc, char *argv[], std::string net):
+		  myIA_(NULL), logfile_(net + "/loss.log") {
 
 		  ndev_ = argc - 2;
 		  // choose which version to use
@@ -43,7 +43,7 @@ public:
 		  for (int i = 0; i < ndev_; ++i) {
 		     mshadow::InitTensorEngine<xpu>(devs_[i]);
 		     nets_[i] = new ConvNet<xpu>(devs_[i], ps_);
-		     nets_[i]->set_architecture(config);
+		     nets_[i]->set_architecture(net + "/config.conf");
 
 		  }
 		  nets_[0]->display_dim();
@@ -99,13 +99,14 @@ public:
 		  }
 
 
+		  /*
 		  if(i == 60 || i == 90 || i == 120 || i == 149){
 			  std::string holdoutfile = "/home/niklas/Desktop/retina_data_3class/acts/" + utility::custom_to_string(i) + "_holdout_";
 			  this->write_acts(xtest, holdoutfile);
 			  std::string testfile = "/home/niklas/Desktop/retina_data_3class/acts/" + utility::custom_to_string(i) + "_train_";
 			  this->write_acts(xtrain, testfile);
 		  }
-
+		  */
 
 		  // evaluation
 		  std::cout << "Epoch " << i << " Train: ";
@@ -193,11 +194,13 @@ public:
 			  long logloss = 0.0;
 			  while ( !testDataLoader.finished() ) {
 				  testDataLoader.readBatch();
-				  this->predict_batch(testDataLoader.X(), testDataLoader.y(), nerr,  logloss);
+				  this->predict_batch(testDataLoader.X(), testDataLoader.y(), nerr, logloss);
 			  }
 			  testDataLoader.reset();
 			  printf("%.2f%% ", (1.0 - (real_t)nerr/testDataLoader.fullSize())*100);
 			  printf("logloss %.4f\n", (-(real_t)logloss/testDataLoader.fullSize()));
+			  utility::write_val_to_file< float >(logfile_.c_str(), -(real_t)logloss/testDataLoader.fullSize());
+
 		  }
 
 		}
@@ -264,7 +267,6 @@ public:
 
 		  ext_nerr += nerr;
 		  ext_logloss += logloss;
-
 	}
 
 	void write_acts(TensorContainer<cpu, 4, real_t> &xtest, std::string outputfile){
@@ -305,6 +307,7 @@ private:
 	std::vector<int> devs_;
 	std::vector<INNet *> nets_;
 	TensorContainer<cpu, 4, real_t> xtrain_augmented_;
+    std::string logfile_;
 
 };
 

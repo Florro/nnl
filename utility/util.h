@@ -143,6 +143,21 @@ void write_vec_to_file(const char* outputfile, std::vector< T > &data){
 
 }
 
+template< typename T >
+void write_val_to_file(const char* outputfile, T val){
+
+	  std::ofstream outputstream (outputfile, ios::app);
+
+	  if (outputstream.is_open()){
+		  outputstream << val << std::endl;
+	  outputstream.close();
+	  }
+	  else{
+		  Error("Datafile not found %s", outputfile);
+	  }
+
+}
+
 
 void load_data_list(const char* filename, std::vector < std::pair < int, std::string > > &img_location){
       std::ifstream dataSet (filename, std::ios::in);
