@@ -12,6 +12,7 @@
  * 10) try 2D conv kernel
  * 11) find solution for image means (store in binary if not existent generate bin)
  * 12) Save modelstate (hyperparams, epoch etc.)
+ * 13) Check where nans pop up in big nets
  *
  */
 
@@ -83,7 +84,7 @@ inline int Run(int argc, char *argv[]) {
 
   //train routine
   double wall0 = get_wall_time();
-  mynntrainer->trainvalidate_batchwise( train_path , test_path, false );
+  mynntrainer->trainvalidate_batchwise( train_path , test_path, true );
   double wall1 = get_wall_time();
 
   std::cout << "\nWall Time = " << wall1 - wall0 << std::endl;

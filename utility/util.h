@@ -182,6 +182,43 @@ void load_data_list(const char* filename, std::vector < std::pair < int, std::st
       dataSet.close();
 }
 
+void get_image_dims(const char* filename, unsigned &size, unsigned &nchannel){
+      std::ifstream dataSet (filename, std::ios::in);
+      assert(dataSet);
+      std::string s;
+      std::getline( dataSet, s );
+      std::pair < int, std::string > tmp;
+	  std::istringstream ss( s );
+      int count = 0;
+	  while (ss)
+	  {
+		  std::string s;
+		  if (!getline( ss, s, ',' )) break;
+		  else if ( count % 2 == 0 ) tmp.first = atoi(s.c_str());
+		  else if ( count % 2 == 1 ) tmp.second = s;
+		  count++;
+	  }
+      dataSet.close();
+
+      std::cout << tmp.second << std::endl;
+      cv::Mat img = cv::imread( (char*)tmp.second.c_str(), cv::IMREAD_COLOR );
+      size = img.size().width;
+
+      bool color = false;
+      for(int i = 0; i < img.size().width; i++){
+    	  for(int j = 0; j < img.size().height; j++){
+    		  cv::Vec3b bgr = img.at< cv::Vec3b >(i, j);
+    		  if( (bgr[0] =! bgr[1]) or (bgr[0] != bgr[2]) or (bgr[1] != bgr[2]) ){
+    			  color = true;
+    		  }
+    	  }
+      }
+
+      if(color) nchannel = 3;
+      else nchannel = 1;
+
+}
+
 void LoadImages( TensorContainer<cpu, 4, real_t> &xdata, vector<string> &img_locations, const unsigned int & start, const unsigned int & size, const int & nchannels){
 
 		for (unsigned i = start; i < size; i++){
@@ -239,21 +276,15 @@ void Load_Images_Labels( TensorContainer<cpu, 4, real_t> & xdata, std::vector< i
 				cv::waitKey(0);
 			}
 
-			//defines roi
-			cv::Rect roi( 0, 0, img.size().width, img.size().height );
-			//copies input image in roi
-			cv::Mat image_roi = img( roi );
-			//computes mean over roi
-			cv::Scalar avgPixelIntensity = cv::mean( image_roi );
 
 			for(unsigned y = 0; y < xdata.size(2); ++y) {
 			  for(unsigned x = 0; x < xdata.size(3); ++x) {
 				cv::Vec3b bgr = img.at< cv::Vec3b >(y, x);
 				// store in RGB order
-				xdata[i][0][y][x] = bgr[0] - avgPixelIntensity.val[0]; //toDo HARDCODE
+				xdata[i][0][y][x] = bgr[0]; //toDo HARDCODE
 				if(nchannels == 3){
-					xdata[i][1][y][x] = bgr[1] - avgPixelIntensity.val[1]; //toDo HARDCODE;
-					xdata[i][2][y][x] = bgr[2] - avgPixelIntensity.val[2]; //toDo HARDCODE;
+					xdata[i][1][y][x] = bgr[1]; //toDo HARDCODE;
+					xdata[i][2][y][x] = bgr[2]; //toDo HARDCODE;
 				}
 			  }
 			}

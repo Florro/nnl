@@ -94,8 +94,7 @@ dataBatchLoader::dataBatchLoader(const std::string & lst_path, const unsigned in
 	std::srand ( 0 ); //unsigned ( std::time(0) )
 
 	// Set picture side length
-	mPicSize = 96;
-	mNumChannels = 1;
+	utility::get_image_dims(lst_path.c_str(), mPicSize, mNumChannels);
 
 	// Read image-lists and determine complete datasize
 	utility::load_data_list(lst_path.c_str(), mImglst);

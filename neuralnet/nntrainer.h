@@ -59,12 +59,12 @@ public:
 
 		  int step = batch_size / ndev_;
 
-		  if(augment_data){
-			  myIA_ = new ImageAugmenter();
-		  }
+
+		  myIA_ = new ImageAugmenter();
+
 
 		  // Create Batch-loaders for Data with max Junksize and shuffle
-		  dataBatchLoader trainDataLoader(train_path, 11000, true);
+		  dataBatchLoader trainDataLoader(train_path, 10000, true);
 		  dataBatchLoader testDataLoader(test_path, 10000, false);
 		  std::cout << std::endl << std::endl;
 
@@ -77,20 +77,19 @@ public:
 
 				  // Load databatch from disk
 				  trainDataLoader.readBatch();
-				  xtrain_augmented_.Resize(trainDataLoader.Data().shape_);
 
 				  //If augmentation schedule is defined
 				  if(augment_data){
 				  std::cout << "aug ";
 					  for(int a = 0; a < trainDataLoader.Data().size(0); a++){
-						  //myIA_->display_img(trainDataLoader.X()[a]);
-						  trainDataLoader.Data()[a] = myIA_->distort_img(trainDataLoader.Data()[a]);
-						  Copy(xtrain_augmented_[a],myIA_->distort_img(trainDataLoader.Data()[a]));
-						  //myIA_->display_img( xtrain_augmented_[a]);
+						  //myIA_->display_img(trainDataLoader.Data()[a]);
+						  myIA_->distort_img(trainDataLoader.Data()[a]);
+						  //myIA_->display_img(trainDataLoader.Data()[a]);
 					  }
-				  }else{
-					  xtrain_augmented_ = trainDataLoader.Data();
 				  }
+
+				  //substract image mean
+				  myIA_->substract_mean(trainDataLoader.Data());
 
 				  // running parallel threads
 				  #pragma omp parallel num_threads(ndev_)
@@ -102,11 +101,11 @@ public:
 					TensorContainer<cpu, 2, real_t> pred;
 					pred.Resize(Shape2(step, num_out));
 
-					for (index_t j = 0; j + batch_size <= xtrain_augmented_.size(0); j += batch_size) {
+					for (index_t j = 0; j + batch_size <= trainDataLoader.Data().size(0); j += batch_size) {
 					  //set epoch for updater
 					  nets_[tid]->set_epoch(i);
 					  // run forward
-					  nets_[tid]->Forward(xtrain_augmented_.Slice(j + tid * step, j + (tid + 1) * step), pred, true);
+					  nets_[tid]->Forward(trainDataLoader.Data().Slice(j + tid * step, j + (tid + 1) * step), pred, true);
 					  // run backprop
 					  nets_[tid]->Backprop(&trainDataLoader.Labels()[j + tid * step]);
 					}
@@ -130,6 +129,8 @@ public:
 			  long logloss = 0.0;
 			  while ( !testDataLoader.finished() ) {
 				  testDataLoader.readBatch();
+				  //substrace image mean
+				  myIA_->substract_mean(testDataLoader.Data());
 				  this->predict_batch(testDataLoader.Data(), testDataLoader.Labels(), nerr, logloss);
 			  }
 			  testDataLoader.reset();

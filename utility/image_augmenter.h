@@ -148,7 +148,8 @@ public:
 
 	}
 
-	mshadow::Tensor<cpu, 3> distort_img(mshadow::Tensor<cpu, 3> data){
+	void distort_img(mshadow::Tensor<cpu, 3> data){
+
 			//Tensor to image
 			cv::Mat res(data.size(1), data.size(2), CV_8UC3);
 			for (index_t i = 0; i < data.size(1); ++i) {
@@ -163,21 +164,63 @@ public:
 			res = this->distort(res);
 
 			//image to tensor
-			tmpres.Resize(data.shape_);
-			for (index_t i = 0; i < tmpres.size(1); ++i) {
-			  for (index_t j = 0; j < tmpres.size(2); ++j) {
+			for (index_t i = 0; i < data.size(1); ++i) {
+			  for (index_t j = 0; j < data.size(2); ++j) {
 				cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
-				tmpres[0][i][j] = (float)bgr[0];
+				data[0][i][j] = (float)bgr[0];
 				if(data.size(0) == 3){
-					tmpres[1][i][j] = (float)bgr[1];
-					tmpres[2][i][j] = (float)bgr[2];
+					data[1][i][j] = (float)bgr[1];
+					data[2][i][j] = (float)bgr[2];
+				}
+			  }
+			}
+	}
+
+
+	void substract_mean(mshadow::Tensor<cpu, 4> data){
+
+		for(index_t i = 0; i < data.size(0); i++){
+
+			mshadow::Tensor<cpu, 3> currentimg = data[i];
+
+			//Tensor to image
+			cv::Mat res(currentimg.size(1), currentimg.size(2), CV_8UC3);
+			for (index_t i = 0; i < currentimg.size(1); ++i) {
+			  for (index_t j = 0; j < currentimg.size(2); ++j) {
+				res.at<cv::Vec3b>(i, j)[0] = currentimg[0][i][j];
+				if(data.size(0) == 3){
+					res.at<cv::Vec3b>(i, j)[1] = currentimg[1][i][j];
+					res.at<cv::Vec3b>(i, j)[2] = currentimg[2][i][j];
 				}
 			  }
 			}
 
-			//return distorted image
-			return tmpres;
+
+			//defines roi
+			cv::Rect roi( 0, 0, res.size().width, res.size().height );
+			//copies input image in roi
+			cv::Mat image_roi = res( roi );
+			//computes mean over roi
+			cv::Scalar avgPixelIntensity = cv::mean( image_roi );
+
+			//image to tensor
+			for (index_t i = 0; i < currentimg.size(1); ++i) {
+			  for (index_t j = 0; j < currentimg.size(2); ++j) {
+				cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
+				currentimg[0][i][j] = (float)bgr[0] - avgPixelIntensity.val[0];
+				if(data.size(0) == 3){
+					currentimg[1][i][j] = (float)bgr[1] - avgPixelIntensity.val[1];
+					currentimg[2][i][j] = (float)bgr[2] - avgPixelIntensity.val[2];
+				}
+			  }
+			}
+
+
+		}
+
 	}
+
+
 
 
 

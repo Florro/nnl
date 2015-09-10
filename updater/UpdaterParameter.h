@@ -81,7 +81,6 @@ struct UpdaterParam {
 	  momentum = epoch * (final_momentum_ - base_momentum_) / saturation_epoch_ + base_momentum_;
 	}
 	momentum = momentum < final_momentum_ ? momentum : final_momentum_;
-
   }
 
 
