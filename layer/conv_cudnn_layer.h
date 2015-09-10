@@ -98,7 +98,7 @@ public:
 		//init weights
 		if(weightInit_ == 0.0f){
 			//Xavier initalization
-			real_t a = sqrt(1.0f / (kernel_.size(2) + kernel_.size(1) + kernel_.size(3)));
+			real_t a = sqrt(3.0f / (kernel_.size(2) + kernel_.size(1) + kernel_.size(3)));
 			rnd.SampleUniform(&kernel_, -a, a);
 		}else{
 			//Gaussian
@@ -268,11 +268,17 @@ public:
  		float alpha = 1.0f;
 		float beta = 0.0f;
 		//CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1
+
 		CUDNN_SAFE_CALL(cudnnConvolutionBackwardFilter_v3(handle_, &alpha,
 												  in_desc_, inputLayer_->getpAct()->data.dptr_,
 												  out_desc_, activations_.data.dptr_,
 												  conv_desc_, back_algo_w_, temp_.dptr_, workspace_size_, &beta,
 												  filter_desc_, gkernel_.dptr_));
+
+		//CUDNN_SAFE_CALL(cudnnConvolutionBackwardFilter( handle_, &alpha, in_desc_, inputLayer_->getpAct()->data.dptr_,
+		//												out_desc_, activations_.data.dptr_, conv_desc_,&beta,filter_desc_, gkernel_.dptr_));
+
+
 
 		if(backPropError_){//CUDNN_CONVOLUTION_BWD_DATA_ALGO_1
 			CUDNN_SAFE_CALL(cudnnConvolutionBackwardData_v3(handle_, &alpha,
@@ -281,6 +287,11 @@ public:
 													conv_desc_, back_algo_, temp_.dptr_, workspace_size_, &beta,
 													in_desc_, inputLayer_->getpAct()->data.dptr_));
 		}
+
+		//CUDNN_SAFE_CALL(cudnnConvolutionBackwardData( handle_, &alpha, filter_desc_, kernel_.dptr_,
+		//		out_desc_, activations_.data.dptr_, conv_desc_,&beta, in_desc_, inputLayer_->getpAct()->data.dptr_));
+
+
 
 		CUDNN_SAFE_CALL(cudnnConvolutionBackwardBias(handle_, &alpha,
 													  out_desc_, activations_.data.dptr_,

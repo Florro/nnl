@@ -1,21 +1,20 @@
 /* ToDo
  *
- * 3)  initialization for deep nets
- * 4)  make datalayer construction optional in configurator / generate dim in code and write in config
- * 6)  trainvalidate just one input, and percentage test to train
- * 8)  config for dynamic augmentation
- * 12) save params
- * 13) multithread augmentation?
- * 14) dynamic datastream
- * 17) img to bin
- * 18) background image solution for different colors
- * 19) in batchsizechanged activations seem not to be freed, just allocated again !!!
- * 20) try 2D conv kernel
+ * 1)  initialization for deep nets
+ * 2)  make datalayer construction optional in configurator / generate dim in code and write in config
+ * 3)  trainvalidate just one input, and percentage test to train
+ * 4)  config for dynamic augmentation
+ * 5)  load params
+ * 6)  multithread augmentation?
+ * 7)  dynamic datastream
+ * 8)  background image solution for different colors
+ * 9)  in batchsizechanged activations seem not to be freed, just allocated again
+ * 10) try 2D conv kernel
+ * 11) find solution for image means (store in binary if not existent generate bin)
+ * 12) Save modelstate (hyperparams, epoch etc.)
+ *
  */
 
-/* NOTES
- * cudnn pooling stochastic! -> pooling max, mshadow
- */
 
 #include <time.h>
 #include <sys/time.h>
@@ -86,7 +85,7 @@ inline int Run(int argc, char *argv[]) {
 
   //train routine
   double wall0 = get_wall_time();
-  mynntrainer->trainvalidate_batchwise( train_path , test_path, true );
+  mynntrainer->trainvalidate_batchwise( train_path , test_path, false );
   double wall1 = get_wall_time();
 
   std::cout << "\nWall Time = " << wall1 - wall0 << std::endl;

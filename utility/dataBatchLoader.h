@@ -48,12 +48,12 @@ public:
 	/*
 	 * Returns a reference to the latest data-batch
 	 */
-	TensorContainer<cpu, 4, real_t> & X(void);
+	TensorContainer<cpu, 4, real_t> & Data(void);
 
 	/*
 	 * Returns a reference to the lateste label-batch
 	 */
-	std::vector<int> & y(void);
+	std::vector<int> & Labels(void);
 
 	/*
 	 * Returns 'true' if the complete dataset has been read, else 'false'
@@ -82,16 +82,16 @@ private:
 	std::vector < std::pair < int, std::string > > mImglst; // Train and test labels and datapath lists
 
 
-	TensorContainer<cpu, 4, real_t> mX;		// Train and testdata container
+	TensorContainer<cpu, 4, real_t> mImageData;		// Train and testdata container
 
-	std::vector<int> mY;					// labels of the current batch
+	std::vector<int> mLabels;					// labels of the current batch
 };
 
 dataBatchLoader::dataBatchLoader(const std::string & lst_path, const unsigned int & batchSize, const bool & shuffle)
 : mPicSize(128), mBatchSize(batchSize), mReadCounter(0), mReadPos(0), mRandomShuffle(shuffle), mSize(0), mPath(lst_path), mFinished(false)
 {
 	// Set random seed
-	std::srand ( unsigned ( std::time(0) ) );
+	std::srand ( 0 ); //unsigned ( std::time(0) )
 
 	// Set picture side length
 	mPicSize = 96;
@@ -106,7 +106,7 @@ dataBatchLoader::dataBatchLoader(const std::string & lst_path, const unsigned in
 	// Calculate number of data-batches
 	mNumBatches = ceil(static_cast<float>(mSize)/ static_cast<float>(mBatchSize));
 
-	std::cout << "FullSize: " << mSize << " Reader in Batches: " << mBatchSize << std::endl << std::endl;
+	std::cout << "DataSize: " << mSize << " JunkSize: " << mBatchSize << std::endl;
 }
 
 void dataBatchLoader::readBatch(void) {
@@ -125,15 +125,14 @@ void dataBatchLoader::readBatch(void) {
 		size =	std::min(mBatchSize, size);
 
 		// Resize data-container
-		mX.Resize(Shape4(size, mNumChannels, mPicSize, mPicSize));
+		mImageData.Resize(Shape4(size, mNumChannels, mPicSize, mPicSize));
 		// Resize label-container
-		if ( mY.size() != 0) {
-			mY.clear();
+		if ( mLabels.size() != 0) {
+			mLabels.clear();
 		}
 
-		// Copy batch-labels into mY
-		// Load batch-images into mX and batch-labels into mY
-		utility::Load_Images_Labels( mX, mY, mImglst, mReadPos, size, mNumChannels);
+		// Load batch-images into mImageData and batch-labels into mLabels
+		utility::Load_Images_Labels( mImageData, mLabels, mImglst, mReadPos, size, mNumChannels);
 
 		// increment counters
 		mReadCounter++;
@@ -152,12 +151,12 @@ void dataBatchLoader::reset(void) {
 	mFinished = false;
 }
 
-TensorContainer<cpu, 4, real_t> & dataBatchLoader::X(void) {
-	return mX;
+TensorContainer<cpu, 4, real_t> & dataBatchLoader::Data(void) {
+	return mImageData;
 }
 
-std::vector<int> & dataBatchLoader::y(void) {
-	return mY;
+std::vector<int> & dataBatchLoader::Labels(void) {
+	return mLabels;
 }
 
 const bool & dataBatchLoader::finished(void) const {

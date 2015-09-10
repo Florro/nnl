@@ -60,6 +60,25 @@ public:
 		activations_.data = pool<pooltype>(inputLayer_->getpAct()->data, activations_.data[0][0].shape_, psize_, psize_, pstride_);
 		Copy(pooltmp_, activations_.data, stream_);
 
+
+		/*
+		TensorContainer<cpu, 4, real_t> data;
+		data.Resize(activations_.data.shape_);
+		Copy(data, activations_.data, activations_.data.stream_);
+		for(int i = 0; i < data.size(2); i++){
+			for(int j = 0; j < data.size(3); j++){
+				std::cout <<  data[0][0][i][j] << " ";
+
+			}
+			std::cout << std::endl;
+		}
+		std::cout << "tens1" << std::endl;
+		int a;
+		std::cin >> a;
+		std::cin.clear();
+		std::cin.ignore(INT_MAX,'\n');
+		*/
+
 	 }
 
 	void backpropagate(void){
