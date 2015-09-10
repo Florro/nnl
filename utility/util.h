@@ -246,15 +246,14 @@ void Load_Images_Labels( TensorContainer<cpu, 4, real_t> & xdata, std::vector< i
 			//computes mean over roi
 			cv::Scalar avgPixelIntensity = cv::mean( image_roi );
 
-
 			for(unsigned y = 0; y < xdata.size(2); ++y) {
 			  for(unsigned x = 0; x < xdata.size(3); ++x) {
 				cv::Vec3b bgr = img.at< cv::Vec3b >(y, x);
 				// store in RGB order
 				xdata[i][0][y][x] = bgr[0] - avgPixelIntensity.val[0]; //toDo HARDCODE
 				if(nchannels == 3){
-					xdata[i][1][y][x] = bgr[1];
-					xdata[i][2][y][x] = bgr[2];
+					xdata[i][1][y][x] = bgr[1] - avgPixelIntensity.val[1]; //toDo HARDCODE;
+					xdata[i][2][y][x] = bgr[2] - avgPixelIntensity.val[2]; //toDo HARDCODE;
 				}
 			  }
 			}

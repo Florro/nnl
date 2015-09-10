@@ -32,6 +32,7 @@ class INNet{
  public:
   virtual void Forward(const Tensor<cpu, 4, real_t>& inbatch, Tensor<cpu, 2, real_t> &oubatch, bool is_train) = 0;
   virtual void Backprop(int* labels) = 0;
+
   virtual void display_dim() = 0;
   virtual void set_architecture(std::string configfile) = 0;
   virtual void set_batchSize( int batch_size ) = 0;

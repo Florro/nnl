@@ -64,7 +64,7 @@ public:
 		  }
 
 		  // Create Batch-loaders for Data with max Junksize and shuffle
-		  dataBatchLoader trainDataLoader(train_path, 10000, true);
+		  dataBatchLoader trainDataLoader(train_path, 11000, true);
 		  dataBatchLoader testDataLoader(test_path, 10000, false);
 		  std::cout << std::endl << std::endl;
 

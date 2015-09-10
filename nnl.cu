@@ -56,10 +56,8 @@ void read_data_mnist( TensorContainer<cpu, 4, real_t> &xtrain,  TensorContainer<
 template<typename xpu>
 inline int Run(int argc, char *argv[]) {
 
-
   std::string train_path;
   std::string test_path;
-
 
   //choose data:
   int data = 1; //0 MNIST, 1 Plankton, 2 retina
@@ -77,9 +75,9 @@ inline int Run(int argc, char *argv[]) {
 	  train_path = "/home/niklas/CXX/nnl/data/plankton/trainnew.lst";
 	  test_path = "/home/niklas/CXX/nnl/data/plankton/testnew.lst";
   }else if (data == 2){
-	  //imglst_train = read_data_retina_batch(xtest, ytrain, ytest);
-	  //read_data_retina(xtrain, xtest, ytrain, ytest);
-	  //config = "/home/niklas/CXX/conv_dist_NNL2/testNets/retina_learning_3class_test.conf";
+	  net = "/home/niklas/CXX/nnl/testNets/retina/net1";
+	  train_path = "/home/niklas/CXX/nnl/data/retina/256_tiff/train.lst";
+	  test_path = "/home/niklas/CXX/nnl/data/retina/256_tiff/test.lst";
   }
   nntrainer<xpu>* mynntrainer = new nntrainer<xpu>(argc, argv, net);
 

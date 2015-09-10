@@ -149,7 +149,6 @@ public:
 	}
 
 	mshadow::Tensor<cpu, 3> distort_img(mshadow::Tensor<cpu, 3> data){
-
 			//Tensor to image
 			cv::Mat res(data.size(1), data.size(2), CV_8UC3);
 			for (index_t i = 0; i < data.size(1); ++i) {
@@ -178,8 +177,9 @@ public:
 
 			//return distorted image
 			return tmpres;
-
 	}
+
+
 
 private:
 

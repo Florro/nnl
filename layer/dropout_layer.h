@@ -42,8 +42,6 @@ public:
 			inputLayer_->getpAct()->data = inputLayer_->getpAct()->data * mask_;
 		}
 
-
-
 	}
 	void backpropagate(void){
 

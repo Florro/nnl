@@ -117,7 +117,7 @@ public:
 	virtual void feedforward(bool is_train) = 0;
 	virtual void backpropagate(void) = 0;
 	virtual void ApplyVisitor( IVisitor<xpu> *pvisitor ) {}
-	virtual void setBackpropError(bool backpropError){};
+	virtual void setBackpropError(bool backpropError) {};
 	virtual Node<xpu>* getpAct(void) = 0;
 	virtual std::string getType() = 0;
 	virtual int getParamSize() = 0;
