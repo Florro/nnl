@@ -40,9 +40,11 @@ class INNet{
   virtual int get_max_epoch() = 0;
   virtual void save_activations(int n_layer, std::string outputfile ) = 0;
   virtual int get_outputdim() = 0;
+  virtual int get_arch_size() = 0;
 
   virtual void Sync() = 0;
   virtual void save_weights(std::string outputfile) = 0;
+  virtual void load_weights(std::string inputfile) = 0;
   virtual ~INNet(){};
 };
 
@@ -250,14 +252,20 @@ class ConvNet : public INNet {
 
   //save activations in layer n_layer to file
   virtual void save_weights(std::string outputfile ){
-
 	  for(int i = 0; i < architecture_.size(); i++){
-		  modelstate::save_weights(architecture_[i],i);
+		  modelstate::save_weights(architecture_[i],i,outputfile);
 	  }
-
-
   }
 
+  virtual void load_weights(std::string inputfile){
+	  for(int i = 0; i < architecture_.size(); i++){
+		  modelstate::load_weights(architecture_[i],i,inputfile);
+	  }
+  }
+
+  virtual int get_arch_size(){
+	  return architecture_.size();
+  }
 
  private:
 

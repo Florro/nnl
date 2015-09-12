@@ -105,7 +105,7 @@ dataBatchLoader::dataBatchLoader(const std::string & lst_path, const unsigned in
 	// Calculate number of data-batches
 	mNumBatches = ceil(static_cast<float>(mSize)/ static_cast<float>(mBatchSize));
 
-	std::cout << "DataSize: " << mSize << " JunkSize: " << mBatchSize << std::endl;
+	//std::cout << "DataSize: " << mSize << " JunkSize: " << mBatchSize << std::endl;
 }
 
 void dataBatchLoader::readBatch(void) {

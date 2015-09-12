@@ -50,7 +50,7 @@ public:
 	}
 
 
-	void trainvalidate_batchwise( const std::string & train_path , const std::string & test_path, bool augment_data) {
+	void trainvalidate_batchwise( const std::string & train_path , const std::string & test_path, bool augment_data, unsigned junkSize) {
 
 		  // mini-batch per device
 		  int batch_size = 100;
@@ -64,10 +64,12 @@ public:
 
 
 		  // Create Batch-loaders for Data with max Junksize and shuffle
-		  dataBatchLoader trainDataLoader(train_path, 10000, true);
-		  dataBatchLoader testDataLoader(test_path, 10000, false);
+		  dataBatchLoader trainDataLoader(train_path, junkSize, true);
+		  dataBatchLoader testDataLoader(test_path, junkSize, false);
 		  std::cout << std::endl << std::endl;
 
+
+		  //nets_[0]->load_weights(net_ + "/modelstate/");
 
 		  //Epochs loop
 		  for (int i = 0; i <= epochs; ++ i){
@@ -89,7 +91,7 @@ public:
 				  }
 
 				  //substract image mean
-				  myIA_->substract_mean(trainDataLoader.Data());
+				  if(!augment_data) myIA_->substract_mean(trainDataLoader.Data());
 
 				  // running parallel threads
 				  #pragma omp parallel num_threads(ndev_)
@@ -113,8 +115,11 @@ public:
 
 				  // evaluation
 				  printf("Epoch: %i, Masterbatch: %u/%u, Train: ", i, b, trainDataLoader.numBatches());
-				  this->predict(trainDataLoader.Data(),trainDataLoader.Labels());
-				  printf("\n");
+				  long train_nerr = 0;
+				  long train_logloss = 0;
+				  this->predict_batch_(trainDataLoader.Data(), trainDataLoader.Labels(), train_nerr, train_logloss);
+				  printf("%.2f%% ", (1.0 - (real_t)train_nerr/trainDataLoader.Data().size(0))*100);
+				  printf("logloss %.4f\n", (-(real_t)train_logloss/trainDataLoader.Data().size(0)));
 				  b++;
 
 			  }
@@ -125,65 +130,80 @@ public:
 			  //Cout logging
 			  std::cout << "Test: ";
 
-			  long nerr = 0.0;
-			  long logloss = 0.0;
+			  long nerr = 0;
+			  long logloss = 0;
 			  while ( !testDataLoader.finished() ) {
 				  testDataLoader.readBatch();
 				  //substrace image mean
 				  myIA_->substract_mean(testDataLoader.Data());
-				  this->predict_batch(testDataLoader.Data(), testDataLoader.Labels(), nerr, logloss);
+				  this->predict_batch_(testDataLoader.Data(), testDataLoader.Labels(), nerr, logloss);
+
+				  //save acts and current weights.
+				  if(i == epochs){
+					  std::string holdoutfile = net_ + "/holdout_";
+					  this->write_acts(testDataLoader.Data(), holdoutfile);
+				  }
+
 			  }
 			  testDataLoader.reset();
 			  printf("%.2f%% ", (1.0 - (real_t)nerr/testDataLoader.fullSize())*100);
 			  printf("logloss %.4f\n", (-(real_t)logloss/testDataLoader.fullSize()));
 			  utility::write_val_to_file< float >(logfile_.c_str(), -(real_t)logloss/testDataLoader.fullSize());
 
-
-			  //save acts and current weights.
 			  if(i == epochs){
 				  nets_[0]->Sync();
-				  nets_[0]->save_weights("");
-				  std::string holdoutfile = net_ + "/holdout_";
-				  this->write_acts(testDataLoader.Data(), holdoutfile);
+				  nets_[0]->save_weights(net_ + "/modelstate/");
 			  }
 
 		  }
 
 		}
 
-	void predict(TensorContainer<cpu, 4, real_t> &xtest, std::vector<int> &ytest){
-		// mini-batch per device
+
+	void write_acts(TensorContainer<cpu, 4, real_t> &xtest, std::string outputfile){
+			// mini-batch per device
 		  int batch_size = 100;
-		  int num_out = nets_[0]->get_outputdim();
 		  int step = batch_size / ndev_;
+		  int num_out = nets_[0]->get_outputdim();
 
 		  // evaluation
-		  long nerr = 0;
-		  long logloss = 0;
+		  mshadow::SetDevice<xpu>(devs_[0]);
+		  TensorContainer<cpu, 2, real_t> pred;
+		  pred.Resize(Shape2(step, num_out));
 
-		  #pragma omp parallel num_threads(ndev_) reduction(+:nerr,logloss)
-		  {
-			int tid = omp_get_thread_num();
-			mshadow::SetDevice<xpu>(devs_[tid]);
+		  for (index_t j = 0; j + step <= xtest.size(0); j += step) {
+				nets_[0]->Forward(xtest.Slice(j, j + step), pred, false);
+				//Save activations
+				nets_[0]->save_activations(nets_[0]->get_arch_size()-1, outputfile+"softmax.csv");
+				nets_[0]->save_activations(nets_[0]->get_arch_size()-3, outputfile+"lastlayer.csv");
 
-			// temp output layer
-		    TensorContainer<cpu, 2, real_t> pred;
-		    pred.Resize(Shape2(step, num_out));
-
-			for (index_t j = 0; j + batch_size <= xtest.size(0); j += batch_size) {
-			  nets_[tid]->Forward(xtest.Slice(j + tid * step, j + (tid + 1) * step), pred, false);
-			  for (int k = 0; k < step; ++ k) {
-				nerr   += MaxIndex(pred[k]) != ytest[j + tid * step + k];
-				logloss += (save_log(pred[ k ][ytest[j + tid * step + k]]));
-			  }
-			}
 		  }
-
-		  printf("%.2f%% ", (1.0 - (real_t)nerr/xtest.size(0))*100);
-		  printf("logloss %.4f ", (-(real_t)logloss/xtest.size(0)));
 	}
 
-	void predict_batch(TensorContainer<cpu, 4, real_t> &xtest, std::vector<int> &ytest, long & ext_nerr, long & ext_logloss){
+
+	~nntrainer(){
+	 for(int i = 0; i < ndev_; ++i) {
+		  mshadow::SetDevice<xpu>(devs_[i]);
+		  delete nets_[i];
+		  ShutdownTensorEngine<xpu>();
+	  }
+	  delete(myIA_);
+	}
+
+private:
+
+	ImageAugmenter* myIA_;
+	mshadow::ps::ISharedModel<xpu, real_t> *ps_;
+	int ndev_;
+	std::string net_;
+	std::vector<int> devs_;
+	std::vector<INNet *> nets_;
+	TensorContainer<cpu, 4, real_t> xtrain_augmented_;
+    std::string logfile_;
+
+
+
+    void predict_batch_(TensorContainer<cpu, 4, real_t> &xtest, std::vector<int> &ytest, long & ext_nerr, long & ext_logloss){
 		// mini-batch per device
 		  int batch_size = 100;
 		  int num_out = nets_[0]->get_outputdim();
@@ -215,46 +235,11 @@ public:
 		  ext_logloss += logloss;
 	}
 
-	void write_acts(TensorContainer<cpu, 4, real_t> &xtest, std::string outputfile){
-			// mini-batch per device
-		  int batch_size = 100;
-		  int step = batch_size / ndev_;
-		  int num_out = nets_[0]->get_outputdim();
-
-		  // evaluation
-		  mshadow::SetDevice<xpu>(devs_[0]);
-		  TensorContainer<cpu, 2, real_t> pred;
-		  pred.Resize(Shape2(step, num_out));
-
-		  for (index_t j = 0; j + step <= xtest.size(0); j += step) {
-				nets_[0]->Forward(xtest.Slice(j, j + step), pred, false);
-				//Save activations
-				nets_[0]->save_activations(17, outputfile+"softmax17.csv");
-				nets_[0]->save_activations(0, outputfile+"softmax9.csv");
-
-		  }
-	}
 
 
-	~nntrainer(){
-	 for(int i = 0; i < ndev_; ++i) {
-		  mshadow::SetDevice<xpu>(devs_[i]);
-		  delete nets_[i];
-		  ShutdownTensorEngine<xpu>();
-	  }
-	  delete(myIA_);
-	}
 
-private:
 
-	ImageAugmenter* myIA_;
-	mshadow::ps::ISharedModel<xpu, real_t> *ps_;
-	int ndev_;
-	std::string net_;
-	std::vector<int> devs_;
-	std::vector<INNet *> nets_;
-	TensorContainer<cpu, 4, real_t> xtrain_augmented_;
-    std::string logfile_;
+
 
 };
 

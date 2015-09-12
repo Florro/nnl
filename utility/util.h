@@ -200,7 +200,6 @@ void get_image_dims(const char* filename, unsigned &size, unsigned &nchannel){
 	  }
       dataSet.close();
 
-      std::cout << tmp.second << std::endl;
       cv::Mat img = cv::imread( (char*)tmp.second.c_str(), cv::IMREAD_COLOR );
       size = img.size().width;
 
@@ -208,7 +207,7 @@ void get_image_dims(const char* filename, unsigned &size, unsigned &nchannel){
       for(int i = 0; i < img.size().width; i++){
     	  for(int j = 0; j < img.size().height; j++){
     		  cv::Vec3b bgr = img.at< cv::Vec3b >(i, j);
-    		  if( (bgr[0] =! bgr[1]) or (bgr[0] != bgr[2]) or (bgr[1] != bgr[2]) ){
+			  if( (((float)bgr[0])  !=  ((float)bgr[1])) || (((float)bgr[0])  !=  ((float)bgr[1]))  || (((float)bgr[0])  !=  ((float)bgr[1])) ){
     			  color = true;
     		  }
     	  }

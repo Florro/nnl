@@ -25,46 +25,19 @@ public:
 		myRand = new RNGen();
 	}
 
-	void compare_img(mshadow::Tensor<cpu, 3> data1, mshadow::Tensor<cpu, 3> data2){
-		cv::Mat res1(data1.size(1), data1.size(2), CV_8UC3);
-		cv::Mat res2(data1.size(1), data1.size(2), CV_8UC3);
-		for (index_t i = 0; i < data1.size(1); ++i) {
-		  for (index_t j = 0; j < data1.size(2); ++j) {
-			res1.at<cv::Vec3b>(i, j)[0] = data1[0][i][j];
-			res1.at<cv::Vec3b>(i, j)[1] = data1[1][i][j];
-			res1.at<cv::Vec3b>(i, j)[2] = data1[2][i][j];
-			res2.at<cv::Vec3b>(i, j)[0] = data2[0][i][j];
-			res2.at<cv::Vec3b>(i, j)[1] = data2[1][i][j];
-			res2.at<cv::Vec3b>(i, j)[2] = data2[2][i][j];
-		  }
-		}
-
-		cv::resize(res1,res1,cv::Size(600,600));//resize image
-		cv::resize(res2,res2,cv::Size(600,600));//resize image
-
-
-		cv::Size sz1 = res1.size();
-		cv::Size sz2 = res2.size();
-		cv::Mat im3(sz1.height, sz1.width+sz2.width, CV_8UC3);
-		cv::Mat left(im3, cv::Rect(0, 0, sz1.width, sz1.height));
-		res1.copyTo(left);
-		cv::Mat right(im3, cv::Rect(sz1.width, 0, sz2.width, sz2.height));
-		res2.copyTo(right);
-		cv::imshow("im3", im3);
-		cv::waitKey(0);
-
-
-	}
-
-
 	void display_img(mshadow::Tensor<cpu, 3> data){
 
 		cv::Mat res(data.size(1), data.size(2), CV_8UC3);
 		for (index_t i = 0; i < data.size(1); ++i) {
 		  for (index_t j = 0; j < data.size(2); ++j) {
 			res.at<cv::Vec3b>(i, j)[0] = data[0][i][j];
-			res.at<cv::Vec3b>(i, j)[1] = data[0][i][j];
-			res.at<cv::Vec3b>(i, j)[2] = data[0][i][j];
+			if(data.size(0) == 3){
+				res.at<cv::Vec3b>(i, j)[1] = data[1][i][j];
+				res.at<cv::Vec3b>(i, j)[2] = data[2][i][j];
+			}else{
+				res.at<cv::Vec3b>(i, j)[1] = data[0][i][j];
+				res.at<cv::Vec3b>(i, j)[2] = data[0][i][j];
+			}
 		  }
 		}
 
@@ -104,9 +77,9 @@ public:
 
 		//Retina
 		bool fixrotate = false;
-		bool mirror = false;
-		int scaling = 0;
-		int translation = 0;
+		bool mirror = true;
+		int scaling = 30;
+		int translation = 5;
 		bool perspective = true;
 		int rotationwarp = 360; //other axis commented out
 		real_t sheeringconstant = 0.00;
@@ -155,22 +128,37 @@ public:
 			for (index_t i = 0; i < data.size(1); ++i) {
 			  for (index_t j = 0; j < data.size(2); ++j) {
 				res.at<cv::Vec3b>(i, j)[0] = data[0][i][j];
-				res.at<cv::Vec3b>(i, j)[1] = data[0][i][j];
-				res.at<cv::Vec3b>(i, j)[2] = data[0][i][j];
+				if(data.size(0) == 3){
+					res.at<cv::Vec3b>(i, j)[1] = data[1][i][j];
+					res.at<cv::Vec3b>(i, j)[2] = data[2][i][j];
+				}
+				else{
+					res.at<cv::Vec3b>(i, j)[1] = data[0][i][j];
+					res.at<cv::Vec3b>(i, j)[2] = data[0][i][j];
+				}
+
 			  }
 			}
 
 			//distort image with opencv
 			res = this->distort(res);
 
+			//defines roi
+			cv::Rect roi( 0, 0, res.size().width, res.size().height );
+			//copies input image in roi
+			cv::Mat image_roi = res( roi );
+			//computes mean over roi
+			cv::Scalar avgPixelIntensity = cv::mean( image_roi );
+
+
 			//image to tensor
 			for (index_t i = 0; i < data.size(1); ++i) {
 			  for (index_t j = 0; j < data.size(2); ++j) {
 				cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
-				data[0][i][j] = (float)bgr[0];
+				data[0][i][j] = (float)bgr[0] - avgPixelIntensity.val[0];;
 				if(data.size(0) == 3){
-					data[1][i][j] = (float)bgr[1];
-					data[2][i][j] = (float)bgr[2];
+					data[1][i][j] = (float)bgr[1] - avgPixelIntensity.val[1];;
+					data[2][i][j] = (float)bgr[2] - avgPixelIntensity.val[2];;
 				}
 			  }
 			}
@@ -188,14 +176,12 @@ public:
 			for (index_t i = 0; i < currentimg.size(1); ++i) {
 			  for (index_t j = 0; j < currentimg.size(2); ++j) {
 				res.at<cv::Vec3b>(i, j)[0] = currentimg[0][i][j];
-				if(data.size(0) == 3){
+				if(currentimg.size(0) == 3){
 					res.at<cv::Vec3b>(i, j)[1] = currentimg[1][i][j];
 					res.at<cv::Vec3b>(i, j)[2] = currentimg[2][i][j];
 				}
 			  }
 			}
-
-
 			//defines roi
 			cv::Rect roi( 0, 0, res.size().width, res.size().height );
 			//copies input image in roi
@@ -208,7 +194,7 @@ public:
 			  for (index_t j = 0; j < currentimg.size(2); ++j) {
 				cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
 				currentimg[0][i][j] = (float)bgr[0] - avgPixelIntensity.val[0];
-				if(data.size(0) == 3){
+				if(currentimg.size(0) == 3){
 					currentimg[1][i][j] = (float)bgr[1] - avgPixelIntensity.val[1];
 					currentimg[2][i][j] = (float)bgr[2] - avgPixelIntensity.val[2];
 				}
@@ -299,7 +285,7 @@ private:
 	    cv::Mat trans = A2 * (T * S * (R * A1));
 
 	    // Apply matrix transformation
-	    cv::warpPerspective(input, output, trans, input.size(), INTERPOL, BORDER, cv::Scalar(256,256,256));
+	    cv::warpPerspective(input, output, trans, input.size(), INTERPOL, BORDER, cv::Scalar(0,0,0));
 
 	 }
 

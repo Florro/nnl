@@ -251,7 +251,7 @@ void setConvolutionLayer(std::vector < std::pair <std::string, std::string > > &
 	while(getpair(name, val, cfg[i])){
 		if(!strcmp(name, "filter_sl")){
 			filter_sl = atoi(val);
-			utility::Check(filter_sl > 1, "conv Filter size has to be greater than 1");
+			utility::Check(filter_sl > 0, "conv Filter size has to be positive");
 		}
 		else if(!strcmp(name, "filter_n")){
 			filter_n = atoi(val);

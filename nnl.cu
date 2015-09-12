@@ -61,7 +61,7 @@ inline int Run(int argc, char *argv[]) {
   std::string test_path;
 
   //choose data:
-  int data = 1; //0 MNIST, 1 Plankton, 2 retina
+  int data = 2; //0 MNIST, 1 Plankton, 2 retina
 
   std::vector< std::string > imglst_train;
 
@@ -72,19 +72,21 @@ inline int Run(int argc, char *argv[]) {
 	  //net = "/home/niklas/CXX/nnl/testNets/mnist/net1";
 	  //read_data_mnist(xtrain, xtest, ytrain, ytest);
   }else if (data == 1){
-	  net = "/home/niklas/CXX/nnl/testNets/plankton/net1";
+	  net = "/home/niklas/CXX/nnl/testNets/plankton/net3";
 	  train_path = "/home/niklas/CXX/nnl/data/plankton/trainnew.lst";
 	  test_path = "/home/niklas/CXX/nnl/data/plankton/testnew.lst";
   }else if (data == 2){
-	  net = "/home/niklas/CXX/nnl/testNets/retina/net1";
-	  train_path = "/home/niklas/CXX/nnl/data/retina/256_tiff/train.lst";
-	  test_path = "/home/niklas/CXX/nnl/data/retina/256_tiff/test.lst";
+	  net = "/home/niklas/CXX/nnl/testNets/retina/net256";
+	  train_path = "/home/niklas/CXX/nnl/data/retina/merge256/train.lst";
+	  test_path = "/home/niklas/CXX/nnl/data/retina/merge256/test.lst";
   }
   nntrainer<xpu>* mynntrainer = new nntrainer<xpu>(argc, argv, net);
 
   //train routine
   double wall0 = get_wall_time();
-  mynntrainer->trainvalidate_batchwise( train_path , test_path, true );
+  //mynntrainer->trainvalidate_batchwise( train_path , test_path, false, 50000 );
+
+  mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 50000 );
   double wall1 = get_wall_time();
 
   std::cout << "\nWall Time = " << wall1 - wall0 << std::endl;
