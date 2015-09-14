@@ -69,8 +69,6 @@ public:
 		  std::cout << std::endl << std::endl;
 
 
-		  //nets_[0]->load_weights(net_ + "/modelstate/");
-
 		  //Epochs loop
 		  for (int i = 0; i <= epochs; ++ i){
 
@@ -145,10 +143,10 @@ public:
 				  }
 
 			  }
-			  testDataLoader.reset();
 			  printf("%.2f%% ", (1.0 - (real_t)nerr/testDataLoader.fullSize())*100);
 			  printf("logloss %.4f\n", (-(real_t)logloss/testDataLoader.fullSize()));
 			  utility::write_val_to_file< float >(logfile_.c_str(), -(real_t)logloss/testDataLoader.fullSize());
+			  testDataLoader.reset();
 
 			  if(i == epochs){
 				  nets_[0]->Sync();

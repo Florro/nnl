@@ -437,7 +437,7 @@ void setPoolingLayer(std::vector < std::pair <std::string, std::string > > &cfg,
 		}
 		else if(!strcmp(name, "mode")){
 			if(!strcmp(val, "max")){
-				architecture.push_back(new pool_cudnn_layer<xpu, MAX>(architecture.back(), window_sl, stride));
+				architecture.push_back(new pool_layer<xpu, red::maximum>(architecture.back(), window_sl, stride));
 				architecture.back()->InitLayer(stream,rnd);
 			}else if(!strcmp(val, "avg")){
 				architecture.push_back(new pool_cudnn_layer<xpu, AVG>(architecture.back(), window_sl, stride));

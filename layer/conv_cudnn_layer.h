@@ -218,47 +218,6 @@ public:
 												out_desc_, activations_.data.dptr_));
 
 
-		/*
-		TensorContainer<cpu, 4, real_t> data;
-		data.Resize(activations_.data.shape_);
-		Copy(data, activations_.data, activations_.data.stream_);
-		for(int i = 128; i < 140; i++){
-			for(int j = 128; j < 140; j++){
-				std::cout <<  data[0][0][i][j] << " ";
-
-			}
-			std::cout << std::endl;
-		}
-		std::cout << "tens1" << std::endl;
-
-
-		int a;
-		std::cin >> a;
-		std::cin.clear();
-		std::cin.ignore(INT_MAX,'\n');
-		*/
-
-
-
-
-		/*
-		TensorContainer<cpu, 4, real_t> data;
-		data.Resize(inputLayer_->getpAct()->data.shape_);
-		Copy(data, inputLayer_->getpAct()->data, inputLayer_->getpAct()->data.stream_);
-		for(int i = 0; i < data.size(2); i++){
-			for(int j = 0; j < data.size(3); j++){
-				std::cout <<  data[0][2][i][j] << " ";
-
-			}
-			std::cout << std::endl;
-		}
-		std::cout << std::endl;
-
-		std::cout << "cout finnished" << std::endl;
-		*/
-
-
-
 
 	 }
 
@@ -269,15 +228,14 @@ public:
 		float beta = 0.0f;
 		//CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1
 
+
 		CUDNN_SAFE_CALL(cudnnConvolutionBackwardFilter_v3(handle_, &alpha,
 												  in_desc_, inputLayer_->getpAct()->data.dptr_,
 												  out_desc_, activations_.data.dptr_,
 												  conv_desc_, back_algo_w_, temp_.dptr_, workspace_size_, &beta,
 												  filter_desc_, gkernel_.dptr_));
-
 		//CUDNN_SAFE_CALL(cudnnConvolutionBackwardFilter( handle_, &alpha, in_desc_, inputLayer_->getpAct()->data.dptr_,
 		//												out_desc_, activations_.data.dptr_, conv_desc_,&beta,filter_desc_, gkernel_.dptr_));
-
 
 
 		if(backPropError_){//CUDNN_CONVOLUTION_BWD_DATA_ALGO_1
@@ -287,7 +245,6 @@ public:
 													conv_desc_, back_algo_, temp_.dptr_, workspace_size_, &beta,
 													in_desc_, inputLayer_->getpAct()->data.dptr_));
 		}
-
 		//CUDNN_SAFE_CALL(cudnnConvolutionBackwardData( handle_, &alpha, filter_desc_, kernel_.dptr_,
 		//		out_desc_, activations_.data.dptr_, conv_desc_,&beta, in_desc_, inputLayer_->getpAct()->data.dptr_));
 
@@ -297,6 +254,143 @@ public:
 													  out_desc_, activations_.data.dptr_,
 													  &beta,
 													  bias_desc_, gbias_.dptr_));
+
+
+
+
+/*
+
+		TensorContainer<cpu, 4, real_t> data;
+		data.Resize(gkernel_.shape_);
+		Copy(data, gkernel_, gkernel_.stream_);
+		bool found_grad = false;
+		for(unsigned i = 0; i < gkernel_.size(0); i++){
+			for(unsigned j = 0; j < gkernel_.size(1); j++){
+				for(unsigned k = 0; k < gkernel_.size(2); k++){
+					for(unsigned l = 0; l < gkernel_.size(3); l++){
+						if(isnan(data[i][j][k][l]) or isinf(data[i][j][k][l])){
+							found_grad = true;
+						}
+					}
+				}
+			}
+		}
+
+		bool found_deltas = false;
+		TensorContainer<cpu, 4, real_t> data3;
+		data3.Resize(activations_.data.shape_);
+		Copy(data3, activations_.data, activations_.data.stream_);
+		for(unsigned i = 0; i < data3.size(0); i++){
+			for(unsigned j = 0; j < data3.size(1); j++){
+				for(unsigned k = 0; k < data3.size(2); k++){
+					for(unsigned l = 0; l < data3.size(3); l++){
+						if(isnan(data3[i][j][k][l]) or isinf(data3[i][j][k][l])){
+							found_deltas = true;
+						}
+					}
+				}
+			}
+		}
+
+
+		bool found_acts = false;
+		TensorContainer<cpu, 4, real_t> data4;
+		data4.Resize(inputLayer_->getpAct()->data.shape_);
+		Copy(data4, inputLayer_->getpAct()->data, inputLayer_->getpAct()->data.stream_);
+		for(unsigned i = 0; i < data4.size(0); i++){
+			for(unsigned j = 0; j < data4.size(1); j++){
+				for(unsigned k = 0; k < data4.size(2); k++){
+					for(unsigned l = 0; l < data4.size(3); l++){
+						if(isnan(data4[i][j][k][l]) or isinf(data4[i][j][k][l])){
+							found_acts = true;
+						}
+					}
+				}
+			}
+		}
+		if(found_deltas){
+			std::cout << "found delta nan" << std::endl;
+			std::cout << activations_.data.size(3) << std::endl;
+		}
+		if(found_grad){
+			std::cout << "found grad nan" << std::endl;
+			std::cout << activations_.data.size(3) << std::endl;
+		}
+		if(found_acts){
+			std::cout << "found acts nan" << std::endl;
+		}
+
+		if(found_deltas){
+
+
+
+	    //Write params into file
+		std::string outputfile = "/home/niklas/Desktop/temp/deltas.csv";
+		std::ofstream outputstream ((char*)outputfile.c_str());
+
+		if (outputstream.is_open()){
+			for(unsigned i = 0; i < data3.size(0); i++){
+			  for(unsigned j = 0; j < data3.size(1); j++){
+				  for(unsigned k = 0; k < data3.size(2); k++){
+					  for(unsigned p = 0; p < data3.size(3); p++){
+						  outputstream << data3[i][j][k][p] << ",";
+					  }
+					  outputstream << std::endl;
+				  }
+				  outputstream << "channel: " << j << std::endl << std::endl;
+			  }
+			  outputstream << "batch: " << i << std::endl << std::endl;
+		 }
+		outputstream.close();
+		}
+		else{
+		  utility::Error("Saving deltas failed");
+		}
+
+
+		std::cout << "check" << std::endl;
+		int a;
+		std::cin >> a;
+		std::cin.clear();
+		std::cin.ignore(INT_MAX,'\n');
+
+
+		}
+
+*/
+
+	/*
+	std::cout << "grad kernel" << std::endl;
+	TensorContainer<cpu, 4, real_t> data4;
+	data4.Resize(gkernel_.shape_);
+	Copy(data4, gkernel_, gkernel_.stream_);
+	for(unsigned k = 0; k < gkernel_.size(2); k++){
+		for(unsigned l = 0; l < gkernel_.size(3); l++){
+			std::cout << data4[0][0][k][l] << " ";
+		}
+		std::cout << std::endl;
+	}
+
+
+
+	std::cout << "deltas" << std::endl;
+	TensorContainer<cpu, 4, real_t> data3;
+	data3.Resize(activations_.data.shape_);
+	Copy(data3, activations_.data, activations_.data.stream_);
+	for(unsigned j = 0; j < activations_.data.size(1); j++){
+		for(unsigned k = 0; k < activations_.data.size(2); k++){
+			for(unsigned l = 0; l < activations_.data.size(3); l++){
+				std::cout << data3[0][j][k][l] << " ";
+			}
+		std::cout << std::endl;
+		}
+	std::cout << std::endl;
+	}
+
+
+	*/
+
+
 
 	}
 

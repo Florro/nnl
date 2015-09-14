@@ -87,10 +87,6 @@ public:
 		}
 
 
-
-
-
-
 		CUDNN_SAFE_CALL(cudnnSetStream(handle_, activations_.data.stream_->stream_));
 		mshadow::Tensor<gpu, 4, float> &in =  inputLayer_->getpAct()->data;
 		mshadow::Tensor<gpu, 4, float> &out = activations_.data;

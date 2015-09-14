@@ -74,6 +74,8 @@ public:
 	  this->epoch_ = epoch;
   }
 
+
+
 private:
 
     //actual updater routine

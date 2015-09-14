@@ -46,7 +46,6 @@ public:
 		// relu layer
 		inputLayer_->getpAct()->data = F<fwdOp>(inputLayer_->getpAct()->data);
 		Copy(activations_.data, inputLayer_->getpAct()->data, stream_);
-
 	 }
 
 	void backpropagate(void){

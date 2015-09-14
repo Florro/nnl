@@ -88,7 +88,7 @@ private:
 };
 
 dataBatchLoader::dataBatchLoader(const std::string & lst_path, const unsigned int & batchSize, const bool & shuffle)
-: mPicSize(128), mBatchSize(batchSize), mReadCounter(0), mReadPos(0), mRandomShuffle(shuffle), mSize(0), mPath(lst_path), mFinished(false)
+: mPicSize(0), mBatchSize(batchSize), mReadCounter(0), mReadPos(0), mRandomShuffle(shuffle), mSize(0), mPath(lst_path), mFinished(false)
 {
 	// Set random seed
 	std::srand ( 0 ); //unsigned ( std::time(0) )
@@ -99,13 +99,54 @@ dataBatchLoader::dataBatchLoader(const std::string & lst_path, const unsigned in
 	// Read image-lists and determine complete datasize
 	utility::load_data_list(lst_path.c_str(), mImglst);
 
+	/*
+
+	//equally weight classes
+	if(shuffle){
+		int size = mImglst.size();
+		int weights[] = {0,10,5,15,20};
+		for(int i = 0; i < size; i++){
+			if(mImglst[i].first == 0){
+				for(int j = 0; j < weights[0]; j++){
+					mImglst.push_back(mImglst[i]);
+				}
+			}
+			else if(mImglst[i].first == 1){
+				for(int j = 0; j < weights[1]; j++){
+					mImglst.push_back(mImglst[i]);
+				}
+			}
+			else if(mImglst[i].first == 1){
+				for(int j = 0; j < weights[2]; j++){
+					mImglst.push_back(mImglst[i]);
+				}
+			}
+			else if(mImglst[i].first == 1){
+				for(int j = 0; j < weights[3]; j++){
+					mImglst.push_back(mImglst[i]);
+				}
+			}
+			else if(mImglst[i].first == 1){
+				for(int j = 0; j < weights[4]; j++){
+					mImglst.push_back(mImglst[i]);
+				}
+			}
+		}
+		for(int i = 0; i < 70; i++){
+			mImglst.pop_back();
+		}
+	}
+
+	*/
+
+
 	mSize = mImglst.size();
 	mBatchSize = std::min(batchSize, mSize);
 
 	// Calculate number of data-batches
 	mNumBatches = ceil(static_cast<float>(mSize)/ static_cast<float>(mBatchSize));
 
-	//std::cout << "DataSize: " << mSize << " JunkSize: " << mBatchSize << std::endl;
+	std::cout << "DataSize: " << mSize << " JunkSize: " << mBatchSize << std::endl;
 }
 
 void dataBatchLoader::readBatch(void) {
