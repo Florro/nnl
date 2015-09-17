@@ -12,7 +12,6 @@
  * 10) try 2D conv kernel
  * 11) find solution for image means (store in binary if not existent generate bin)
  * 12) Save modelstate (hyperparams, epoch etc.)
- * 13) Check where nans pop up in big nets
  * 14) 1/batchsize hardcode in sgdupdater
  * 15) Check cudnn pooling
  * 16) use average pooling in pool layer
@@ -65,7 +64,7 @@ inline int Run(int argc, char *argv[]) {
   std::string test_path;
 
   //choose data:
-  int data = 1; //0 MNIST, 1 Plankton, 2 retina
+  int data = 2; //0 MNIST, 1 Plankton, 2 retina
 
   std::vector< std::string > imglst_train;
 
@@ -88,9 +87,8 @@ inline int Run(int argc, char *argv[]) {
 
   //train routine
   double wall0 = get_wall_time();
-  //mynntrainer->trainvalidate_batchwise( train_path , test_path, false, 50000 );
-
-  mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 20000 );
+  mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 22500 );
+  //mynntrainer->predict(test_path, 20000);
   double wall1 = get_wall_time();
 
   std::cout << "\nWall Time = " << wall1 - wall0 << std::endl;

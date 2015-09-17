@@ -10,7 +10,6 @@
 
 #include "layer.h"
 
-
 template<typename xpu, typename fwdOp, typename BackOp>
 class activation_layer : public ILayer<xpu>{
 

@@ -25,32 +25,16 @@ public:
 		myRand = new RNGen();
 	}
 
-	void display_img(mshadow::Tensor<cpu, 3> data){
-
-		cv::Mat res(data.size(1), data.size(2), CV_8UC3);
-		for (index_t i = 0; i < data.size(1); ++i) {
-		  for (index_t j = 0; j < data.size(2); ++j) {
-			res.at<cv::Vec3b>(i, j)[0] = data[0][i][j];
-			if(data.size(0) == 3){
-				res.at<cv::Vec3b>(i, j)[1] = data[1][i][j];
-				res.at<cv::Vec3b>(i, j)[2] = data[2][i][j];
-			}else{
-				res.at<cv::Vec3b>(i, j)[1] = data[0][i][j];
-				res.at<cv::Vec3b>(i, j)[2] = data[0][i][j];
-			}
-		  }
-		}
+	void display_img(cv::Mat res){
 
 		cv::resize(res,res,cv::Size(800,800));//resize image
-
 	    cv::namedWindow( "Display window", CV_WINDOW_AUTOSIZE );// Create a window for display.
 	    cv::imshow( "Display window", res );                   // Show our image inside it.
-
 	    cv::waitKey(0);                                          // Wait for a keystroke in the window
 
 	}
 
-	cv::Mat distort(cv::Mat &src){
+	void distort(cv::Mat &src){
 
 		cv::Mat rot_mat( 2, 3, CV_32FC1 );
 
@@ -85,12 +69,10 @@ public:
 		real_t sheeringconstant = 0.00;
 
 
-		cv::Mat aug_img = src.clone();
-
 		//Randomly mirror on x/y axis, (no flip is 0.5 biased)
 		if(mirror){
 			if(myRand->bernoulli(0.5)){
-			  cv::flip(aug_img,aug_img,myRand->bernoulli(0.5));
+			  cv::flip(src,src,myRand->bernoulli(0.5));
 			}
 		}
 
@@ -100,111 +82,39 @@ public:
 			real_t angle = 90*(int)myRand->uniform(0,4);
 			real_t scale = 1.0;// + myRand->uniform(-0.15,0.15);
 
-			cv::Point center = cv::Point( aug_img.cols/2, aug_img.rows/2 );
+			cv::Point center = cv::Point( src.cols/2, src.rows/2 );
 
 			/// Get the rotation matrix with the specifications above
 			rot_mat = getRotationMatrix2D( center, angle, scale );
 
 			/// Rotate the warped image
-			cv::warpAffine( aug_img, aug_img, rot_mat, aug_img.size(), INTERPOL, BORDER, cv::Scalar(0,0,0) );
+			cv::warpAffine( src, src, rot_mat, src.size(), INTERPOL, BORDER, cv::Scalar(0,0,0) );
 
 		}
 
 		if(perspective){
-			rotateImage_(aug_img, aug_img, 90, 90, 90 + myRand->uniform(-rotationwarp,rotationwarp),
+			rotateImage_(src, src, 90, 90, 90 + myRand->uniform(-rotationwarp,rotationwarp),
 					0 + myRand->uniform(-translation,translation), 0 + myRand->uniform(-translation,translation), 200 + myRand->uniform(-scaling,scaling),200,
 					myRand->uniform(-sheeringconstant,sheeringconstant), myRand->uniform(-sheeringconstant,sheeringconstant) );
 
 		}
 
-		return aug_img;
 
 	}
 
-	void distort_img(mshadow::Tensor<cpu, 3> data){
+	cv::Scalar get_mean(cv::Mat &image){
 
-			//Tensor to image
-			cv::Mat res(data.size(1), data.size(2), CV_8UC3);
-			for (index_t i = 0; i < data.size(1); ++i) {
-			  for (index_t j = 0; j < data.size(2); ++j) {
-				res.at<cv::Vec3b>(i, j)[0] = data[0][i][j];
-				if(data.size(0) == 3){
-					res.at<cv::Vec3b>(i, j)[1] = data[1][i][j];
-					res.at<cv::Vec3b>(i, j)[2] = data[2][i][j];
-				}
-				else{
-					res.at<cv::Vec3b>(i, j)[1] = data[0][i][j];
-					res.at<cv::Vec3b>(i, j)[2] = data[0][i][j];
-				}
+		//defines roi
+		cv::Rect roi( 0, 0, image.size().width, image.size().height );
+		//copies input image in roi
+		cv::Mat image_roi = image( roi );
+		//computes mean over roi
+		cv::Scalar avgPixelIntensity = cv::mean( image_roi );
 
-			  }
-			}
-
-			//distort image with opencv
-			res = this->distort(res);
-
-			//defines roi
-			cv::Rect roi( 0, 0, res.size().width, res.size().height );
-			//copies input image in roi
-			cv::Mat image_roi = res( roi );
-			//computes mean over roi
-			cv::Scalar avgPixelIntensity = cv::mean( image_roi );
-
-
-			//image to tensor
-			for (index_t i = 0; i < data.size(1); ++i) {
-			  for (index_t j = 0; j < data.size(2); ++j) {
-				cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
-				data[0][i][j] = (float)bgr[0] - avgPixelIntensity.val[0];;
-				if(data.size(0) == 3){
-					data[1][i][j] = (float)bgr[1] - avgPixelIntensity.val[1];;
-					data[2][i][j] = (float)bgr[2] - avgPixelIntensity.val[2];;
-				}
-			  }
-			}
-	}
-
-
-	void substract_mean(mshadow::Tensor<cpu, 4> data){
-
-		for(index_t i = 0; i < data.size(0); i++){
-
-			mshadow::Tensor<cpu, 3> currentimg = data[i];
-
-			//Tensor to image
-			cv::Mat res(currentimg.size(1), currentimg.size(2), CV_8UC3);
-			for (index_t i = 0; i < currentimg.size(1); ++i) {
-			  for (index_t j = 0; j < currentimg.size(2); ++j) {
-				res.at<cv::Vec3b>(i, j)[0] = currentimg[0][i][j];
-				if(currentimg.size(0) == 3){
-					res.at<cv::Vec3b>(i, j)[1] = currentimg[1][i][j];
-					res.at<cv::Vec3b>(i, j)[2] = currentimg[2][i][j];
-				}
-			  }
-			}
-			//defines roi
-			cv::Rect roi( 0, 0, res.size().width, res.size().height );
-			//copies input image in roi
-			cv::Mat image_roi = res( roi );
-			//computes mean over roi
-			cv::Scalar avgPixelIntensity = cv::mean( image_roi );
-
-			//image to tensor
-			for (index_t i = 0; i < currentimg.size(1); ++i) {
-			  for (index_t j = 0; j < currentimg.size(2); ++j) {
-				cv::Vec3b bgr = res.at<cv::Vec3b>(i, j);
-				currentimg[0][i][j] = (float)bgr[0] - avgPixelIntensity.val[0];
-				if(currentimg.size(0) == 3){
-					currentimg[1][i][j] = (float)bgr[1] - avgPixelIntensity.val[1];
-					currentimg[2][i][j] = (float)bgr[2] - avgPixelIntensity.val[2];
-				}
-			  }
-			}
-
-
-		}
+		return avgPixelIntensity;
 
 	}
+
 
 
 

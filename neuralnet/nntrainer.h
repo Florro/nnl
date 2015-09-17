@@ -11,7 +11,6 @@
 #include "mshadow/tensor.h"
 #include "mshadow-ps/mshadow_ps.h"
 #include "neural_net.h"
-#include "../utility/image_augmenter.h"
 #include "../utility/dataBatchLoader.h"
 
 // helper function to get the max index
@@ -28,7 +27,7 @@ class nntrainer{
 public:
 
 	nntrainer(int argc, char *argv[], std::string net):
-		  myIA_(NULL), logfile_(net + "/loss.log"), net_(net) {
+		logfile_(net + "/loss.log"), net_(net) {
 
 		  ndev_ = argc - 2;
 		  // choose which version to use
@@ -59,13 +58,9 @@ public:
 
 		  int step = batch_size / ndev_;
 
-
-		  myIA_ = new ImageAugmenter();
-
-
 		  // Create Batch-loaders for Data with max Junksize and shuffle
-		  dataBatchLoader trainDataLoader(train_path, junkSize, true);
-		  dataBatchLoader testDataLoader(test_path, junkSize, false);
+		  dataBatchLoader trainDataLoader(train_path.c_str(), junkSize, true, true);
+		  dataBatchLoader testDataLoader(test_path.c_str(), junkSize, false, false);
 		  std::cout << std::endl << std::endl;
 
 
@@ -78,20 +73,7 @@ public:
 				  // Load databatch from disk
 				  trainDataLoader.readBatch();
 
-				  //If augmentation schedule is defined
-				  if(augment_data){
-				  std::cout << "aug ";
-					  for(int a = 0; a < trainDataLoader.Data().size(0); a++){
-						  //myIA_->display_img(trainDataLoader.Data()[a]);
-						  myIA_->distort_img(trainDataLoader.Data()[a]);
-						  //myIA_->display_img(trainDataLoader.Data()[a]);
-					  }
-				  }
-
-				  //substract image mean
-				  if(!augment_data) myIA_->substract_mean(trainDataLoader.Data());
-
-				  // running parallel threads
+					  // running parallel threads
 				  #pragma omp parallel num_threads(ndev_)
 				  {
 					int tid = omp_get_thread_num();
@@ -132,8 +114,6 @@ public:
 			  long logloss = 0;
 			  while ( !testDataLoader.finished() ) {
 				  testDataLoader.readBatch();
-				  //substrace image mean
-				  myIA_->substract_mean(testDataLoader.Data());
 				  this->predict_batch_(testDataLoader.Data(), testDataLoader.Labels(), nerr, logloss);
 
 				  //save acts and current weights.
@@ -148,12 +128,40 @@ public:
 			  utility::write_val_to_file< float >(logfile_.c_str(), -(real_t)logloss/testDataLoader.fullSize());
 			  testDataLoader.reset();
 
-			  if(i == epochs){
+			  if(i == epochs or i == 10){
 				  nets_[0]->Sync();
 				  nets_[0]->save_weights(net_ + "/modelstate/");
 			  }
 
 		  }
+
+		}
+
+
+	void predict( const std::string & test_path, unsigned junkSize) {
+
+		  // mini-batch per device
+		  nets_[0]->load_weights(net_ + "/modelstate/");
+
+		  // Create Batch-loaders for Data with max Junksize and shuffle
+		  dataBatchLoader testDataLoader(test_path.c_str(), junkSize, false, false);
+		  std::cout << std::endl << std::endl;
+
+		  //Cout logging
+		  std::cout << "Test: ";
+
+		  long nerr = 0;
+		  long logloss = 0;
+		  while ( !testDataLoader.finished() ) {
+			  testDataLoader.readBatch();
+			  this->predict_batch_(testDataLoader.Data(), testDataLoader.Labels(), nerr, logloss);
+
+		  }
+		  printf("%.2f%% ", (1.0 - (real_t)nerr/testDataLoader.fullSize())*100);
+		  printf("logloss %.4f\n", (-(real_t)logloss/testDataLoader.fullSize()));
+		  utility::write_val_to_file< float >(logfile_.c_str(), -(real_t)logloss/testDataLoader.fullSize());
+		  testDataLoader.reset();
+
 
 		}
 
@@ -185,12 +193,10 @@ public:
 		  delete nets_[i];
 		  ShutdownTensorEngine<xpu>();
 	  }
-	  delete(myIA_);
 	}
 
 private:
 
-	ImageAugmenter* myIA_;
 	mshadow::ps::ISharedModel<xpu, real_t> *ps_;
 	int ndev_;
 	std::string net_;
