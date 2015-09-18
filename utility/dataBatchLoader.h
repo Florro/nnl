@@ -25,7 +25,7 @@ public:
 	/*
 	 * Create a 'dataBatchLoader' to read from 'lst_path' in 'batchSize' chunks
 	 */
-	dataBatchLoader(const unsigned int & batchSize, const bool & shuffle, const bool & augmentData, std::vector < std::pair <std::string, std::string > > & cfg);
+	dataBatchLoader(const unsigned int & batchSize, const bool & is_train, const bool & augmentData, std::vector < std::pair <std::string, std::string > > & cfg);
 
 	/*
 	 * Destructor
@@ -80,7 +80,7 @@ private:
 	unsigned int mBatchSize_;				// chunk-size
 	unsigned int mReadCounter_;				// counter for number of batches
 	unsigned int mReadPos_;					// current read position in the path-list
-	bool mRandomShuffle_;
+	bool mRandomis_train_;
 	bool mAugmentData_;
 	std::vector < std::pair <std::string, std::string > > cfg_;
 
@@ -102,9 +102,9 @@ dataBatchLoader:: ~dataBatchLoader(void){
 	delete(myIA_);
 }
 
-dataBatchLoader::dataBatchLoader(const unsigned int & batchSize, const bool & shuffle, const bool & augmentData, std::vector < std::pair <std::string, std::string > > &cfg)
+dataBatchLoader::dataBatchLoader(const unsigned int & batchSize, const bool & is_train, const bool & augmentData, std::vector < std::pair <std::string, std::string > > &cfg)
 : mPicSize_(0), mBatchSize_(batchSize), mNumChannels_(0),
-  mReadCounter_(0), mReadPos_(0), mRandomShuffle_(shuffle), mSize_(0), mPath_(""), mNumBatches__(false),
+  mReadCounter_(0), mReadPos_(0), mRandomis_train_(is_train), mSize_(0), mPath_(""), mNumBatches__(false),
   mAugmentData_(augmentData), myIA_(NULL),
   cfg_(cfg)
 {
@@ -128,17 +128,9 @@ dataBatchLoader::dataBatchLoader(const unsigned int & batchSize, const bool & sh
 				   sheering,
 				   background );
 
-    mPath_ = shuffle ? trainpath : testpath;
+    mPath_ = is_train ? trainpath : testpath;
 
-    std::cout << mPath_ << std::endl;
-    std::cout << mirror << std::endl;
-    std::cout << scaling << std::endl;
-    std::cout << translation << std::endl;
-    std::cout << rotation << std::endl;
-    std::cout << sheering << std::endl;
-    std::cout << background << std::endl;
-
-	// Set random seed
+    // Set random seed
 	std::srand ( 0 ); //unsigned ( std::time(0) )
 
 	// Set picture side length
@@ -149,7 +141,7 @@ dataBatchLoader::dataBatchLoader(const unsigned int & batchSize, const bool & sh
 
 	/*
 	//equally weight classes
-	if(shuffle){
+	if(is_train){
 		int size = mImglst.size();
 		int weights[] = {0,10,5,15,20};
 		for(int i = 0; i < size; i++){
@@ -205,8 +197,8 @@ dataBatchLoader::dataBatchLoader(const unsigned int & batchSize, const bool & sh
 
 void dataBatchLoader::readBatch(void) {
 
-	// Random shuffle pathlist
-	if ( mReadCounter_ == 0 and mRandomShuffle_) {
+	// Random is_train pathlist
+	if ( mReadCounter_ == 0 and mRandomis_train_) {
 		std::random_shuffle ( mImglst.begin(), mImglst.end() );
 	}
 
@@ -258,9 +250,7 @@ void dataBatchLoader::Load_Images_Labels_(const unsigned & size){
 
 		if(mAugmentData_){
 			//distort image with opencv
-			myIA_->display_img(img);
 			myIA_->distort(img);
-			myIA_->display_img(img);
 		}
 
 		//substract image mean

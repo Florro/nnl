@@ -45,27 +45,6 @@ public:
 
 		cv::Mat rot_mat( 2, 3, CV_32FC1 );
 
-		//MNIST
-		/*
-		bool fixrotate = false;
-		bool mirror = false;
-		int scaling = 1.25;
-		int translation = 3;
-		bool perspective = true;
-		int rotationwarp = 15;
-		real_t sheeringconstant = 0.05;
-
-
-		//Plankton
-		bool fixrotate = true;
-		bool mirror = true;
-		int scaling = 1.25;
-		int translation = 7;
-		bool perspective = true;
-		int rotationwarp = 25;
-		real_t sheeringconstant = 0.05;
-		 */
-
 
 		//Randomly mirror on x/y axis, (no flip is 0.5 biased)
 		if(mirror_){
