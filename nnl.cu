@@ -76,12 +76,8 @@ inline int Run(int argc, char *argv[]) {
 	  //read_data_mnist(xtrain, xtest, ytrain, ytest);
   }else if (data == 1){
 	  net = "/home/niklas/CXX/nnl/testNets/plankton/net1";
-	  train_path = "/home/niklas/CXX/nnl/data/plankton/trainnew.lst";
-	  test_path = "/home/niklas/CXX/nnl/data/plankton/testnew.lst";
   }else if (data == 2){
 	  net = "/home/niklas/CXX/nnl/testNets/retina/net256_fc";
-	  train_path = "/home/niklas/CXX/nnl/data/retina/merge256/train.lst";
-	  test_path = "/home/niklas/CXX/nnl/data/retina/merge256/test.lst";
   }
 
   //Read config file toDo: Put into function
