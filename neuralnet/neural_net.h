@@ -34,7 +34,7 @@ class INNet{
   virtual void Backprop(int* labels) = 0;
 
   virtual void display_dim() = 0;
-  virtual void set_architecture(std::string configfile) = 0;
+  virtual void set_architecture(std::vector < std::pair <std::string, std::string > > &cfg) = 0;
   virtual void set_batchSize( int batch_size ) = 0;
   virtual void set_epoch(int epoch) = 0;
   virtual int get_max_epoch() = 0;
@@ -72,15 +72,7 @@ class ConvNet : public INNet {
   }
 
 
-  virtual void set_architecture(std::string configfile){
-
-	    ConfigIterator* myreader = new ConfigIterator(configfile.c_str());
-		//auto_ptr<ConfigIterator> myreader(new ConfigIterator(configfile.c_str()));
-		std::vector < std::pair <std::string, std::string > > cfg;
-		while(!myreader->isEnd()){
-			myreader->Next();
-			cfg.push_back(std::make_pair(myreader->name(), myreader->val()));
-		}
+  virtual void set_architecture(std::vector < std::pair <std::string, std::string > > &cfg){
 
 	    hyperparam_ = new updater::UpdaterParam();
 

@@ -24,7 +24,7 @@
 #include <sys/time.h>
 #include "neuralnet/nntrainer.h"
 #include "mshadow/tensor.h"
-
+#include "neuralnet/configurator.h"
 
 // helper function to messure wall time
 double get_wall_time(){
@@ -64,7 +64,7 @@ inline int Run(int argc, char *argv[]) {
   std::string test_path;
 
   //choose data:
-  int data = 2; //0 MNIST, 1 Plankton, 2 retina
+  int data = 1; //0 MNIST, 1 Plankton, 2 retina
 
   std::vector< std::string > imglst_train;
 
@@ -79,11 +79,21 @@ inline int Run(int argc, char *argv[]) {
 	  train_path = "/home/niklas/CXX/nnl/data/plankton/trainnew.lst";
 	  test_path = "/home/niklas/CXX/nnl/data/plankton/testnew.lst";
   }else if (data == 2){
-	  net = "/home/niklas/CXX/nnl/testNets/retina/net256";
+	  net = "/home/niklas/CXX/nnl/testNets/retina/net256_fc";
 	  train_path = "/home/niklas/CXX/nnl/data/retina/merge256/train.lst";
 	  test_path = "/home/niklas/CXX/nnl/data/retina/merge256/test.lst";
   }
-  nntrainer<xpu>* mynntrainer = new nntrainer<xpu>(argc, argv, net);
+
+  //Read config file toDo: Put into function
+  auto_ptr<ConfigIterator> myreader(new ConfigIterator((net + "/config.conf").c_str()));
+  std::vector < std::pair <std::string, std::string > > cfg;
+  while(!myreader->isEnd()){
+	myreader->Next();
+	cfg.push_back(std::make_pair(myreader->name(), myreader->val()));
+  }
+
+  //Create nn trainer
+  nntrainer<xpu>* mynntrainer = new nntrainer<xpu>(argc, argv, net, cfg);
 
   //train routine
   double wall0 = get_wall_time();

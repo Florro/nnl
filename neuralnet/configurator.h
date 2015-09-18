@@ -198,6 +198,10 @@ bool getpair(const char* &name, const char* &val, std::pair<std::string, std::st
 	else if(!strcmp(name, "GlobalParams")){
 		return false;
 	}
+	else if(!strcmp(name, "Dataconfig")){
+		return false;
+	}
+
 	return true;
 }
 
@@ -506,7 +510,7 @@ void setSGDGlobalParams(std::vector < std::pair <std::string, std::string > > &c
 				utility::Check( hyperparam->epochs  > 0,  "number of epochs must be atleast 1", val );
 			}
 			else{
-				utility::Error("Unknown Pooling Layer Parameter: %s", name);
+				utility::Error("Unknown Global parameter: %s", name);
 			}
 			i++;
 		}
@@ -529,6 +533,13 @@ void readNetConfig(std::vector < std::pair <std::string, std::string > > &cfg, s
 		}
 		else if(!strcmp(name, "GlobalParams")){
 			netconfigmode = strcmp(val, "start");
+		}
+		else if(!strcmp(name, "Dataconfig")){
+			while(strcmp(name, "Dataconfig")){
+				i++;
+				name = cfg[i].first.c_str();
+				val = cfg[i].second.c_str();
+			}
 		}
 		else if(netconfigmode){
 			if(!strcmp(name, "Layer")){
@@ -584,6 +595,110 @@ void readNetConfig(std::vector < std::pair <std::string, std::string > > &cfg, s
 
 }
 
+
+void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cfg,
+						int &i,
+						std::string& trainpath,
+						std::string& testpath,
+						bool &mirror,
+						int &scaling,
+						int &translation,
+						int &rotation, //other axis commented out
+						real_t &sheering,
+						std::string &background	){
+
+
+
+	const char *name = "empty";
+	const char *val = "empty";
+
+	mirror = false;
+	scaling = 0.0;
+	translation = 0;
+	rotation = 0; //other axis commented out
+	sheering = 0.0f;
+	background = "white";
+
+
+	while(getpair(name, val, cfg[i])){
+			if(!strcmp(name, "trainpath")){
+				trainpath = val;
+			}
+			else if(!strcmp(name, "testpath")){
+				testpath = val;
+			}
+			else if(!strcmp(name, "mirror")){
+				if(!strcmp(val, "true")){
+					mirror = true;
+				}else if(!strcmp(val, "false")){
+					mirror  = false;
+				}
+				else{
+					utility::Error("Wrong mirror flag: %s", val);
+				}
+			}
+			else if(!strcmp(name, "scaling")){
+				scaling = atof(val);
+				utility::Check(scaling >= 0, "scaling must be positive: %i", val);
+			}
+			else if(!strcmp(name, "translation")){
+				translation = atoi(val);
+				utility::Check(translation >= 0, "translation must be positive: %i", val);
+			}
+			else if(!strcmp(name, "rotation")){
+				rotation = atoi(val);
+				utility::Check(rotation >= 0, "rotation must be positive: %i", val);
+			}
+			else if(!strcmp(name, "sheering")){
+				sheering = atof(val);
+				utility::Check(sheering >= 0, "sheering must be positive: %i", val);
+			}
+			else if(!strcmp(name, "background")){
+				background = val;
+				utility::Check(background == "white" || background == "black", "background must be either black or white %s", val);
+			}
+			else{
+				utility::Error("Unknown Dataconfig parameter: %s", name);
+			}
+			i++;
+		}
+	i--;
+
+
+}
+
+void readDataConfig(std::vector < std::pair <std::string, std::string > > &cfg,
+					std::string &trainpath,
+					std::string &testpath,
+					bool &mirror,
+					int &scaling,
+					int &translation,
+					int &rotation, //other axis commented out
+					real_t &sheering,
+					std::string &background){
+
+	bool dataconfigmode = false;
+
+	for(int i = 0; i < (int)cfg.size(); i++){
+		const char *name = cfg[i].first.c_str();
+	    const char *val = cfg[i].second.c_str();
+
+		if(!strcmp(name, "Netconfig")){
+			dataconfigmode = false;
+		}
+		else if(!strcmp(name, "GlobalParams")){
+			dataconfigmode = false;
+		}
+		else if(!strcmp(name, "Dataconfig")){
+			dataconfigmode = !strcmp(val, "start");
+		}
+		else if(dataconfigmode){
+			setDataParameter(cfg, i, trainpath, testpath, mirror, scaling, translation, rotation, sheering, background);
+		}
+
+	}
+
+}
 
 
 

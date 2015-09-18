@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
 #include "RNGen.h"
-#include "mshadow/tensor.h"
 
 #define INTERPOL cv::INTER_CUBIC
 #define BORDER cv::BORDER_CONSTANT
@@ -21,8 +20,16 @@ using namespace std;
 class ImageAugmenter {
 public:
 
-	ImageAugmenter(){
+	ImageAugmenter(	bool mirror,
+					int scaling,
+					int translation,
+					int rotation, //other axis commented out
+					real_t sheering,
+					std::string background):
+					mirror_(mirror), scaling_(scaling), translation_(translation), rotation_(rotation), sheering_(sheering), background_(background){
+
 		myRand = new RNGen();
+
 	}
 
 	void display_img(cv::Mat res){
@@ -59,43 +66,24 @@ public:
 		real_t sheeringconstant = 0.05;
 		 */
 
-		//Retina
-		bool fixrotate = false;
-		bool mirror = true;
-		int scaling = 30;
-		int translation = 5;
-		bool perspective = true;
-		int rotationwarp = 360; //other axis commented out
-		real_t sheeringconstant = 0.00;
-
 
 		//Randomly mirror on x/y axis, (no flip is 0.5 biased)
-		if(mirror){
+		if(mirror_){
 			if(myRand->bernoulli(0.5)){
 			  cv::flip(src,src,myRand->bernoulli(0.5));
 			}
 		}
 
-		//Randomly rotate 0°,90°,180°,270°
-		if(fixrotate){
 
-			real_t angle = 90*(int)myRand->uniform(0,4);
-			real_t scale = 1.0;// + myRand->uniform(-0.15,0.15);
 
-			cv::Point center = cv::Point( src.cols/2, src.rows/2 );
-
-			/// Get the rotation matrix with the specifications above
-			rot_mat = getRotationMatrix2D( center, angle, scale );
-
-			/// Rotate the warped image
-			cv::warpAffine( src, src, rot_mat, src.size(), INTERPOL, BORDER, cv::Scalar(0,0,0) );
-
+		bool perspective_ = true;
+		if( (rotation_ == 0)  and (scaling_ == 0) and (sheering_ == 0.0) and (translation_ == 0)){
+			perspective_ = false;
 		}
-
-		if(perspective){
-			rotateImage_(src, src, 90, 90, 90 + myRand->uniform(-rotationwarp,rotationwarp),
-					0 + myRand->uniform(-translation,translation), 0 + myRand->uniform(-translation,translation), 200 + myRand->uniform(-scaling,scaling),200,
-					myRand->uniform(-sheeringconstant,sheeringconstant), myRand->uniform(-sheeringconstant,sheeringconstant) );
+		if(perspective_){
+			rotateImage_(src, src, 90, 90, 90 + myRand->uniform(-rotation_,rotation_),
+					0 + myRand->uniform(-translation_,translation_), 0 + myRand->uniform(-translation_,translation_), 200 + myRand->uniform(-scaling_,scaling_),200,
+					myRand->uniform(-sheering_,sheering_), myRand->uniform(-sheering_,sheering_) );
 
 		}
 
@@ -195,14 +183,24 @@ private:
 	    cv::Mat trans = A2 * (T * S * (R * A1));
 
 	    // Apply matrix transformation
-	    cv::warpPerspective(input, output, trans, input.size(), INTERPOL, BORDER, cv::Scalar(0,0,0));
-
+	    if(background_ == "white"){
+	    	cv::warpPerspective(input, output, trans, input.size(), INTERPOL, BORDER, cv::Scalar(256,256,256));
+	    }else if(background_ == "black"){
+	    	cv::warpPerspective(input, output, trans, input.size(), INTERPOL, BORDER, cv::Scalar(0,0,0));
+	    }
+	    else{
+	    	utility::Error("invalid background type");
+	    }
 	 }
 
 
-	mshadow::TensorContainer<cpu, 3> tmpres;
 	RNGen* myRand;
-
+	bool mirror_ ;
+	int scaling_;
+	int translation_;
+	int rotation_; //other axis commented out
+	std::string background_;
+	real_t sheering_;
 
 };
 

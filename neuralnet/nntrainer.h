@@ -26,8 +26,8 @@ template<typename xpu>
 class nntrainer{
 public:
 
-	nntrainer(int argc, char *argv[], std::string net):
-		logfile_(net + "/loss.log"), net_(net) {
+	nntrainer(int argc, char *argv[],  std::string net, std::vector < std::pair <std::string, std::string > > cfg):
+		logfile_(net + "/loss.log"), net_(net), cfg_(cfg) {
 
 		  ndev_ = argc - 2;
 		  // choose which version to use
@@ -42,7 +42,7 @@ public:
 		  for (int i = 0; i < ndev_; ++i) {
 		     mshadow::InitTensorEngine<xpu>(devs_[i]);
 		     nets_[i] = new ConvNet<xpu>(devs_[i], ps_);
-		     nets_[i]->set_architecture(net_ + "/config.conf");
+		     nets_[i]->set_architecture(cfg);
 
 		  }
 		  nets_[0]->display_dim();
@@ -59,8 +59,8 @@ public:
 		  int step = batch_size / ndev_;
 
 		  // Create Batch-loaders for Data with max Junksize and shuffle
-		  dataBatchLoader trainDataLoader(train_path.c_str(), junkSize, true, true);
-		  dataBatchLoader testDataLoader(test_path.c_str(), junkSize, false, false);
+		  dataBatchLoader trainDataLoader(junkSize, true, true, cfg_);
+		  dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
 		  std::cout << std::endl << std::endl;
 
 
@@ -144,7 +144,7 @@ public:
 		  nets_[0]->load_weights(net_ + "/modelstate/");
 
 		  // Create Batch-loaders for Data with max Junksize and shuffle
-		  dataBatchLoader testDataLoader(test_path.c_str(), junkSize, false, false);
+		  dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
 		  std::cout << std::endl << std::endl;
 
 		  //Cout logging
@@ -204,7 +204,7 @@ private:
 	std::vector<INNet *> nets_;
 	TensorContainer<cpu, 4, real_t> xtrain_augmented_;
     std::string logfile_;
-
+    std::vector < std::pair <std::string, std::string > > cfg_;
 
 
     void predict_batch_(TensorContainer<cpu, 4, real_t> &xtest, std::vector<int> &ytest, long & ext_nerr, long & ext_logloss){

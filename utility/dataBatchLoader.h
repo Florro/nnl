@@ -16,7 +16,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
-
+#include "../neuralnet/configurator.h"
 
 struct dataBatchLoader{
 
@@ -25,7 +25,7 @@ public:
 	/*
 	 * Create a 'dataBatchLoader' to read from 'lst_path' in 'batchSize' chunks
 	 */
-	dataBatchLoader(const char* lst_path, const unsigned int & batchSize, const bool & shuffle, const bool & augmentData);
+	dataBatchLoader(const unsigned int & batchSize, const bool & shuffle, const bool & augmentData, std::vector < std::pair <std::string, std::string > > & cfg);
 
 	/*
 	 * Destructor
@@ -82,9 +82,10 @@ private:
 	unsigned int mReadPos_;					// current read position in the path-list
 	bool mRandomShuffle_;
 	bool mAugmentData_;
+	std::vector < std::pair <std::string, std::string > > cfg_;
 
 	unsigned int mSize_;					// full data-size to process
-	const char* mPath_;						// path to file
+	std::string mPath_;						// path to file
 	bool mNumBatches__;						// state of the reader
 	unsigned int mNumBatches;				// number of data-reads
 	ImageAugmenter* myIA_;                  // data structure to augment data
@@ -101,11 +102,42 @@ dataBatchLoader:: ~dataBatchLoader(void){
 	delete(myIA_);
 }
 
-dataBatchLoader::dataBatchLoader(const char* lst_path, const unsigned int & batchSize, const bool & shuffle, const bool & augmentData)
+dataBatchLoader::dataBatchLoader(const unsigned int & batchSize, const bool & shuffle, const bool & augmentData, std::vector < std::pair <std::string, std::string > > &cfg)
 : mPicSize_(0), mBatchSize_(batchSize), mNumChannels_(0),
-  mReadCounter_(0), mReadPos_(0), mRandomShuffle_(shuffle), mSize_(0), mPath_(lst_path), mNumBatches__(false),
-  mAugmentData_(augmentData), myIA_(NULL)
+  mReadCounter_(0), mReadPos_(0), mRandomShuffle_(shuffle), mSize_(0), mPath_(""), mNumBatches__(false),
+  mAugmentData_(augmentData), myIA_(NULL),
+  cfg_(cfg)
 {
+
+	std::string trainpath;
+	std::string testpath;
+	bool mirror;
+	int scaling;
+	int translation;
+	int rotation;
+	real_t sheering;
+	std::string background;
+
+	readDataConfig(cfg_,
+				   trainpath,
+				   testpath,
+				   mirror,
+				   scaling,
+				   translation,
+				   rotation, //other axis commented out
+				   sheering,
+				   background );
+
+    mPath_ = shuffle ? trainpath : testpath;
+
+    std::cout << mPath_ << std::endl;
+    std::cout << mirror << std::endl;
+    std::cout << scaling << std::endl;
+    std::cout << translation << std::endl;
+    std::cout << rotation << std::endl;
+    std::cout << sheering << std::endl;
+    std::cout << background << std::endl;
+
 	// Set random seed
 	std::srand ( 0 ); //unsigned ( std::time(0) )
 
@@ -153,7 +185,13 @@ dataBatchLoader::dataBatchLoader(const char* lst_path, const unsigned int & batc
 	}
 
 	*/
-	if(mAugmentData_)	myIA_ = new ImageAugmenter();
+
+	if(mAugmentData_)	myIA_ = new ImageAugmenter(mirror,
+												   scaling,
+												   translation,
+												   rotation, //other axis commented out
+												   sheering,
+												   background);
 
 	mSize_ = mImglst.size();
 	mBatchSize_ = std::min(batchSize, mSize_);
@@ -220,7 +258,9 @@ void dataBatchLoader::Load_Images_Labels_(const unsigned & size){
 
 		if(mAugmentData_){
 			//distort image with opencv
+			myIA_->display_img(img);
 			myIA_->distort(img);
+			myIA_->display_img(img);
 		}
 
 		//substract image mean
@@ -242,8 +282,8 @@ void dataBatchLoader::Load_Images_Labels_(const unsigned & size){
 
 
 void dataBatchLoader::load_data_list_(){
-      std::ifstream dataSet (mPath_, std::ios::in);
-      if(!dataSet){    	  utility::Error("Data list file not found %s", mPath_);      }
+      std::ifstream dataSet (mPath_.c_str(), std::ios::in);
+      if(!dataSet){    	  utility::Error("Data list file not found %s", mPath_.c_str());      }
 
       while (dataSet)
       {
@@ -266,8 +306,8 @@ void dataBatchLoader::load_data_list_(){
 }
 
 void dataBatchLoader::get_image_dims_(){
-      std::ifstream dataSet (mPath_, std::ios::in);
-      if(!dataSet){    	  utility::Error("Data list file not found %s", mPath_);      }
+      std::ifstream dataSet (mPath_.c_str(), std::ios::in);
+      if(!dataSet){    	  utility::Error("Data list file not found %s", mPath_.c_str());      }
 
       std::string s;
       std::getline( dataSet, s );
