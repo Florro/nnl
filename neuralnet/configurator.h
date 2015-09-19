@@ -11,7 +11,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-
+#include <memory>
 
 
 #include "../layer/layer.h"
@@ -29,6 +29,9 @@
 
 #include "mshadow/tensor.h"
 #include "../utility/mshadow_op.h"
+#include "../utility/image_augmenter.h"
+
+namespace configurator{
 
 using namespace std;
 
@@ -422,6 +425,7 @@ void setPoolingLayer(std::vector < std::pair <std::string, std::string > > &cfg,
 
 	int window_sl = 3;
 	int stride = 1;
+	bool modeflag = false;
 
 	const char *name = "empty";
 	const char *val = "empty";
@@ -449,11 +453,15 @@ void setPoolingLayer(std::vector < std::pair <std::string, std::string > > &cfg,
 			}else{
 				utility::Error("Unknown Pooling Mode: %s", val);
 			}
+			modeflag = true;
 		}
 		else{
 			utility::Error("Unknown Pooling Layer Parameter: %s", name);
 		}
 		i++;
+	}
+	if(!modeflag){
+		utility::Error("Pooling Layer needs Reducer specification (max/avg)");
 	}
 	i--;
 }
@@ -508,6 +516,10 @@ void setSGDGlobalParams(std::vector < std::pair <std::string, std::string > > &c
 			else if(!strcmp(name, "epochs")){
 				hyperparam->epochs = atoi(val);
 				utility::Check( hyperparam->epochs  > 0,  "number of epochs must be atleast 1", val );
+			}
+			else if(!strcmp(name, "batchsize")){
+				hyperparam->batchsize = atoi(val);
+				utility::Check( hyperparam->batchsize  > 0,  "batchsize must be atleast 1", val );
 			}
 			else{
 				utility::Error("Unknown Global parameter: %s", name);
@@ -600,24 +612,19 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 						int &i,
 						std::string& trainpath,
 						std::string& testpath,
-						bool &mirror,
-						int &scaling,
-						int &translation,
-						int &rotation, //other axis commented out
-						real_t &sheering,
-						std::string &background	){
+						cvimg::augparams &augparameter	){
 
 
 
 	const char *name = "empty";
 	const char *val = "empty";
 
-	mirror = false;
-	scaling = 0.0;
-	translation = 0;
-	rotation = 0; //other axis commented out
-	sheering = 0.0f;
-	background = "white";
+	augparameter.mirror = false;
+	augparameter.scaling = 0.0;
+	augparameter.translation = 0;
+	augparameter.rotation = 0; //other axis commented out
+	augparameter.sheering = 0.0f;
+	augparameter.background = "white";
 
 
 	while(getpair(name, val, cfg[i])){
@@ -629,33 +636,33 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 			}
 			else if(!strcmp(name, "mirror")){
 				if(!strcmp(val, "true")){
-					mirror = true;
+					augparameter.mirror = true;
 				}else if(!strcmp(val, "false")){
-					mirror  = false;
+					augparameter.mirror  = false;
 				}
 				else{
 					utility::Error("Wrong mirror flag: %s", val);
 				}
 			}
 			else if(!strcmp(name, "scaling")){
-				scaling = atof(val);
-				utility::Check(scaling >= 0, "scaling must be positive: %i", val);
+				augparameter.scaling = atof(val);
+				utility::Check(augparameter.scaling >= 0, "scaling must be positive: %i", val);
 			}
 			else if(!strcmp(name, "translation")){
-				translation = atoi(val);
-				utility::Check(translation >= 0, "translation must be positive: %i", val);
+				augparameter.translation = atoi(val);
+				utility::Check(augparameter.translation >= 0, "translation must be positive: %i", val);
 			}
 			else if(!strcmp(name, "rotation")){
-				rotation = atoi(val);
-				utility::Check(rotation >= 0, "rotation must be positive: %i", val);
+				augparameter.rotation = atoi(val);
+				utility::Check(augparameter.rotation >= 0, "rotation must be positive: %i", val);
 			}
 			else if(!strcmp(name, "sheering")){
-				sheering = atof(val);
-				utility::Check(sheering >= 0, "sheering must be positive: %i", val);
+				augparameter.sheering = atof(val);
+				utility::Check(augparameter.sheering >= 0, "sheering must be positive: %i", val);
 			}
 			else if(!strcmp(name, "background")){
-				background = val;
-				utility::Check(background == "white" || background == "black", "background must be either black or white %s", val);
+				augparameter.background = val;
+				utility::Check(augparameter.background == "white" || augparameter.background == "black" || augparameter.background == "gray", "background must be either black, white or gray %s", val);
 			}
 			else{
 				utility::Error("Unknown Dataconfig parameter: %s", name);
@@ -670,12 +677,7 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 void readDataConfig(std::vector < std::pair <std::string, std::string > > &cfg,
 					std::string &trainpath,
 					std::string &testpath,
-					bool &mirror,
-					int &scaling,
-					int &translation,
-					int &rotation, //other axis commented out
-					real_t &sheering,
-					std::string &background){
+					cvimg::augparams &augparameter){
 
 	bool dataconfigmode = false;
 
@@ -693,7 +695,7 @@ void readDataConfig(std::vector < std::pair <std::string, std::string > > &cfg,
 			dataconfigmode = !strcmp(val, "start");
 		}
 		else if(dataconfigmode){
-			setDataParameter(cfg, i, trainpath, testpath, mirror, scaling, translation, rotation, sheering, background);
+			setDataParameter(cfg, i, trainpath, testpath, augparameter);
 		}
 
 	}
@@ -702,15 +704,57 @@ void readDataConfig(std::vector < std::pair <std::string, std::string > > &cfg,
 
 
 
+//read cfg
+std::vector < std::pair <std::string, std::string > > readcfg(string cfgfile){
+	std::vector < std::pair <std::string, std::string > > cfg;
+
+	auto_ptr<ConfigIterator> myreader(new ConfigIterator((cfgfile).c_str()));
+
+	while(!myreader->isEnd()){
+		myreader->Next();
+		cfg.push_back(std::make_pair(myreader->name(), myreader->val()));
+	}
+
+
+	return cfg;
+
+}
+
+//Get batchsize from config
+int getbatchsize(std::vector< std::pair < std::string, std::string > > cfg){
+	int batchsize = 0;
+
+	for(unsigned i = 0; i < cfg.size(); i++){
+		const char *name = cfg[i].first.c_str();
+		const char *val = cfg[i].second.c_str();
+
+		if(!strcmp(name, "batchsize")){
+			batchsize = atoi(val);
+		}
+	}
+
+	return batchsize;
+}
+
+//Get batchsize from config
+int getepochs(std::vector< std::pair < std::string, std::string > > cfg){
+	int epochs = 0;
+
+	for(unsigned i = 0; i < cfg.size(); i++){
+		const char *name = cfg[i].first.c_str();
+		const char *val = cfg[i].second.c_str();
+
+		if(!strcmp(name, "epochs")){
+			epochs = atoi(val);
+		}
+	}
+
+	return epochs;
+}
 
 
 
-
-
-
-
-
-
+}
 
 
 #endif /* CONFIGURATOR_H_ */

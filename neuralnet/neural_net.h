@@ -37,14 +37,13 @@ class INNet{
   virtual void set_architecture(std::vector < std::pair <std::string, std::string > > &cfg) = 0;
   virtual void set_batchSize( int batch_size ) = 0;
   virtual void set_epoch(int epoch) = 0;
-  virtual int get_max_epoch() = 0;
   virtual void save_activations(int n_layer, std::string outputfile ) = 0;
   virtual int get_outputdim() = 0;
   virtual int get_arch_size() = 0;
 
   virtual void Sync() = 0;
-  virtual void save_weights(std::string outputfile) = 0;
-  virtual void load_weights(std::string inputfile) = 0;
+  virtual void save_weights(std::string outputfile, unsigned epoch) = 0;
+  virtual void load_weights(std::string inputfile, unsigned epoch) = 0;
   virtual ~INNet(){};
 };
 
@@ -77,7 +76,7 @@ class ConvNet : public INNet {
 	    hyperparam_ = new updater::UpdaterParam();
 
 		//Read config and generate network architecture
-	    readNetConfig(cfg, architecture_, losslayer_, hyperparam_, stream_,  rnd_);
+	    configurator::readNetConfig(cfg, architecture_, losslayer_, hyperparam_, stream_,  rnd_);
 
 	    //disable backpropagation of error into data layer
 	    architecture_[1]->setBackpropError(false);
@@ -213,10 +212,6 @@ class ConvNet : public INNet {
   virtual int get_outputdim(){
 	  return this->architecture_.back()->getpAct()->data.size(3);
   }
-  //return number of max epochs
-  virtual int get_max_epoch(){
-	  return this->hyperparam_->epochs;
-  }
 
   //save activations in layer n_layer to file
   virtual void save_activations(int n_layer, std::string outputfile ){
@@ -243,15 +238,16 @@ class ConvNet : public INNet {
   }
 
   //save activations in layer n_layer to file
-  virtual void save_weights(std::string outputfile ){
+  virtual void save_weights(std::string outputfile, unsigned epoch ){
+	  utility::createDir(outputfile, "modelstate_" +  utility::custom_to_string(epoch));
 	  for(int i = 0; i < architecture_.size(); i++){
-		  modelstate::save_weights(architecture_[i],i,outputfile);
+		  modelstate::save_weights(architecture_[i],i,outputfile + "/modelstate_" + utility::custom_to_string(epoch) + "/");
 	  }
   }
 
-  virtual void load_weights(std::string inputfile){
+  virtual void load_weights(std::string inputfile, unsigned epoch){
 	  for(int i = 0; i < architecture_.size(); i++){
-		  modelstate::load_weights(architecture_[i],i,inputfile);
+		  modelstate::load_weights(architecture_[i],i,inputfile  + "/modelstate_" + utility::custom_to_string(epoch) + "/");
 	  }
   }
 

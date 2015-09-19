@@ -12,21 +12,30 @@
 #include <opencv2/opencv.hpp>
 #include "RNGen.h"
 
+namespace cvimg{
+
 #define INTERPOL cv::INTER_CUBIC
 #define BORDER cv::BORDER_CONSTANT
 
 using namespace std;
 
+struct augparams{
+
+	bool mirror;
+	int scaling;
+	int translation;
+	int rotation;
+	real_t sheering;
+	std::string background;
+
+};
+
+
 class ImageAugmenter {
 public:
 
-	ImageAugmenter(	bool mirror,
-					int scaling,
-					int translation,
-					int rotation, //other axis commented out
-					real_t sheering,
-					std::string background):
-					mirror_(mirror), scaling_(scaling), translation_(translation), rotation_(rotation), sheering_(sheering), background_(background){
+	ImageAugmenter( augparams param):
+						param_(param){
 
 		myRand = new RNGen();
 
@@ -47,22 +56,20 @@ public:
 
 
 		//Randomly mirror on x/y axis, (no flip is 0.5 biased)
-		if(mirror_){
+		if(param_.mirror){
 			if(myRand->bernoulli(0.5)){
 			  cv::flip(src,src,myRand->bernoulli(0.5));
 			}
 		}
 
-
-
 		bool perspective_ = true;
-		if( (rotation_ == 0)  and (scaling_ == 0) and (sheering_ == 0.0) and (translation_ == 0)){
+		if( (param_.rotation == 0)  and (param_.scaling == 0) and (param_.sheering == 0.0) and (param_.translation == 0)){
 			perspective_ = false;
 		}
 		if(perspective_){
-			rotateImage_(src, src, 90, 90, 90 + myRand->uniform(-rotation_,rotation_),
-					0 + myRand->uniform(-translation_,translation_), 0 + myRand->uniform(-translation_,translation_), 200 + myRand->uniform(-scaling_,scaling_),200,
-					myRand->uniform(-sheering_,sheering_), myRand->uniform(-sheering_,sheering_) );
+			rotateImage_(src, src, 90, 90, 90 + myRand->uniform(-param_.rotation,param_.rotation),
+					0 + myRand->uniform(-param_.translation,param_.translation), 0 + myRand->uniform(-param_.translation,param_.translation), 200 + myRand->uniform(-param_.scaling,param_.scaling),200,
+					myRand->uniform(-param_.sheering,param_.sheering), myRand->uniform(-param_.sheering,param_.sheering) );
 
 		}
 
@@ -162,11 +169,14 @@ private:
 	    cv::Mat trans = A2 * (T * S * (R * A1));
 
 	    // Apply matrix transformation
-	    if(background_ == "white"){
+	    if(param_.background == "white"){
 	    	cv::warpPerspective(input, output, trans, input.size(), INTERPOL, BORDER, cv::Scalar(256,256,256));
-	    }else if(background_ == "black"){
+	    }else if(param_.background == "black"){
 	    	cv::warpPerspective(input, output, trans, input.size(), INTERPOL, BORDER, cv::Scalar(0,0,0));
 	    }
+	    else if(param_.background == "gray"){
+			cv::warpPerspective(input, output, trans, input.size(), INTERPOL, BORDER, cv::Scalar(128,128,128));
+		}
 	    else{
 	    	utility::Error("invalid background type");
 	    }
@@ -174,15 +184,10 @@ private:
 
 
 	RNGen* myRand;
-	bool mirror_ ;
-	int scaling_;
-	int translation_;
-	int rotation_; //other axis commented out
-	std::string background_;
-	real_t sheering_;
+	augparams param_;
 
 };
 
-
+}
 
 #endif /* IMAGE_AUGMENTER_H_ */

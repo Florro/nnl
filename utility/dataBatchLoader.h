@@ -18,6 +18,8 @@
 #include <ctime>
 #include "../neuralnet/configurator.h"
 
+namespace dataload{
+
 struct dataBatchLoader{
 
 public:
@@ -88,7 +90,7 @@ private:
 	std::string mPath_;						// path to file
 	bool mNumBatches__;						// state of the reader
 	unsigned int mNumBatches;				// number of data-reads
-	ImageAugmenter* myIA_;                  // data structure to augment data
+	cvimg::ImageAugmenter* myIA_;                  // data structure to augment data
 
 	std::vector < std::pair < int, std::string > > mImglst; // Train and test labels and datapath lists
 
@@ -111,22 +113,12 @@ dataBatchLoader::dataBatchLoader(const unsigned int & batchSize, const bool & is
 
 	std::string trainpath;
 	std::string testpath;
-	bool mirror;
-	int scaling;
-	int translation;
-	int rotation;
-	real_t sheering;
-	std::string background;
+	cvimg::augparams augparameter;
 
-	readDataConfig(cfg_,
-				   trainpath,
-				   testpath,
-				   mirror,
-				   scaling,
-				   translation,
-				   rotation, //other axis commented out
-				   sheering,
-				   background );
+	configurator::readDataConfig(cfg_,
+							   trainpath,
+							   testpath,
+							   augparameter );
 
     mPath_ = is_train ? trainpath : testpath;
 
@@ -178,12 +170,7 @@ dataBatchLoader::dataBatchLoader(const unsigned int & batchSize, const bool & is
 
 	*/
 
-	if(mAugmentData_)	myIA_ = new ImageAugmenter(mirror,
-												   scaling,
-												   translation,
-												   rotation, //other axis commented out
-												   sheering,
-												   background);
+	if(mAugmentData_)	myIA_ = new cvimg::ImageAugmenter(augparameter);
 
 	mSize_ = mImglst.size();
 	mBatchSize_ = std::min(batchSize, mSize_);
@@ -273,7 +260,7 @@ void dataBatchLoader::Load_Images_Labels_(const unsigned & size){
 
 void dataBatchLoader::load_data_list_(){
       std::ifstream dataSet (mPath_.c_str(), std::ios::in);
-      if(!dataSet){    	  utility::Error("Data list file not found %s", mPath_.c_str());      }
+      if(!dataSet){    	  utility::Error("Data list file not found: %s", (char*)mPath_.c_str());      }
 
       while (dataSet)
       {
@@ -297,7 +284,7 @@ void dataBatchLoader::load_data_list_(){
 
 void dataBatchLoader::get_image_dims_(){
       std::ifstream dataSet (mPath_.c_str(), std::ios::in);
-      if(!dataSet){    	  utility::Error("Data list file not found %s", mPath_.c_str());      }
+      if(!dataSet){    	  utility::Error("Data list file not found: %s", (char*)mPath_.c_str());      }
 
       std::string s;
       std::getline( dataSet, s );
@@ -355,6 +342,8 @@ const unsigned int & dataBatchLoader::fullSize(void) const {
 
 const unsigned int & dataBatchLoader::numBatches(void) const {
 	return mNumBatches;
+}
+
 }
 
 #endif /* DATABATCHLOADER_H_ */

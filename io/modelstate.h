@@ -90,45 +90,56 @@ struct CreateWeightLoaderVisitor : public IVisitor<xpu> {
 					   mshadow::Tensor<xpu,3> weight,
 					   mshadow::Tensor<xpu,3> grad) {
 
-		  TensorContainer<cpu, 3, real_t> host_weight;
-		  host_weight.Resize(weight.shape_);
-
-		  //Write params into file
-		  std::string inputfile = inputfile_ + "layer_" + utility::custom_to_string(layer_id_) + "_" + utility::custom_to_string(is_bias);
-
-		  std::ifstream dataSet ((char*)inputfile.c_str());
-		  if(!dataSet){
-			  utility::Error("Loading weights at layer %i from file %s failed", layer_id_, (char*)inputfile.c_str());
-		  }
-		  unsigned count1 = 0;
-		  unsigned count2 = 0;
-		  while (dataSet)
-		  {
-			  std::string s;
-			  if (!std::getline( dataSet, s )) break;
-			  std::istringstream ss( s );
-			  count2 = 0;
-			  while (ss)
-			  {
-				std::string s;
-				if (!getline( ss, s, ',' )) break;
-				host_weight[count1][count2] = atof(s.c_str());
-				count2++;
-			  }
-			  count1++;
-		  }
-		  dataSet.close();
-
-		  Copy(weight, host_weight, weight.stream_);
-
-
-
+		 utility::Error("3D weights loader not implemented yet");
 
   	}
 	virtual void Visit(bool is_bias,
 					   mshadow::Tensor<xpu,4> weight,
 					   mshadow::Tensor<xpu,4> grad) {
+
+	  TensorContainer<cpu, 4, real_t> host_weight;
+	  host_weight.Resize(weight.shape_);
+
+	  //Write params into file
+	  std::string inputfile = inputfile_ + "layer_" + utility::custom_to_string(layer_id_) + "_" + utility::custom_to_string(is_bias);
+
+	  std::ifstream dataSet ((char*)inputfile.c_str());
+	  if(!dataSet){
+		  utility::Error("Loading weights at layer %i from file %s failed", layer_id_, (char*)inputfile.c_str());
+	  }
+
+	  unsigned globalcount = 0;
+	  unsigned count1 = 0;
+	  unsigned count2 = 0;
+	  unsigned count3 = 0;
+	  unsigned count4 = 0;
+
+	  while (dataSet)
+	  {
+		  std::string s;
+		  if (!std::getline( dataSet, s )) break;
+		  std::istringstream ss( s );
+		  while (ss)
+		  {
+			std::string s;
+			if (!getline( ss, s, ',' )) break;
+
+			count4 = globalcount % host_weight.size(3);
+			count3 = (globalcount / host_weight.size(3)) % host_weight.size(2);
+			count2 = (globalcount / ( host_weight.size(3) * host_weight.size(2) )) % host_weight.size(1);
+			count1 = (globalcount / ( host_weight.size(3) * host_weight.size(2) * host_weight.size(1))) % host_weight.size(0);
+
+			host_weight[count1][count2][count3][count4] = atof(s.c_str());
+			globalcount++;
+		  }
+	  }
+	  dataSet.close();
+
+	  Copy(weight, host_weight, weight.stream_);
+
 	}
+
+
 
 };
 

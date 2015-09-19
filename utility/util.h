@@ -4,7 +4,8 @@
 #include <cstdlib>
 #include <opencv2/opencv.hpp>
 #include <fstream>
-#include "mshadow/tensor.h"
+#include <sys/stat.h>
+#include <unistd.h>
 
 typedef float real_t;
 
@@ -158,6 +159,12 @@ void write_val_to_file(const char* outputfile, T val){
 
 }
 
+void createDir(string NetDir, string name){
+	struct stat st = {0};
+
+	if (stat((char*)(NetDir + name).c_str(), &st) == -1) {		mkdir((char*)(NetDir + name).c_str(), 0700);	}
+	else{			cout << "Directory " << name <<  " already exists!" << endl;	}
+}
 
 
 

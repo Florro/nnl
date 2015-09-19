@@ -43,6 +43,10 @@ struct UpdaterParam {
    /*! \brief epochs  */
    int epochs;
 
+   /*! \brief batchsize  */
+   int batchsize;
+
+
   /*! \brief clip gradient (remove nans, clip gradient at +- clip) */
   float clipgradient;
   /*! \brief constructor that sets default parameters */
@@ -63,6 +67,7 @@ struct UpdaterParam {
     clipgradient = 0.0f;
     epochs = 10;
 
+    batchsize = 100;
 
   }
 

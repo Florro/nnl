@@ -56,6 +56,8 @@ void read_data_mnist( TensorContainer<cpu, 4, real_t> &xtrain,  TensorContainer<
 	 xtest = reshape(xtest_, xtest.shape_);
 }
 
+
+
 // multithreaded run routine
 template<typename xpu>
 inline int Run(int argc, char *argv[]) {
@@ -75,18 +77,13 @@ inline int Run(int argc, char *argv[]) {
 	  //net = "/home/niklas/CXX/nnl/testNets/mnist/net1";
 	  //read_data_mnist(xtrain, xtest, ytrain, ytest);
   }else if (data == 1){
-	  net = "/home/niklas/CXX/nnl/testNets/plankton/net1";
+	  net = "/home/niklas/CXX/nnl/testNets/plankton/net2/";
   }else if (data == 2){
-	  net = "/home/niklas/CXX/nnl/testNets/retina/net256_fc";
+	  net = "/home/niklas/CXX/nnl/testNets/retina/net256_fc_local_mean/";
   }
 
-  //Read config file toDo: Put into function
-  auto_ptr<ConfigIterator> myreader(new ConfigIterator((net + "/config.conf").c_str()));
-  std::vector < std::pair <std::string, std::string > > cfg;
-  while(!myreader->isEnd()){
-	myreader->Next();
-	cfg.push_back(std::make_pair(myreader->name(), myreader->val()));
-  }
+  //Read config file
+  std::vector < std::pair <std::string, std::string > > cfg = configurator::readcfg(net + "/config.conf");
 
   //Create nn trainer
   nntrainer<xpu>* mynntrainer = new nntrainer<xpu>(argc, argv, net, cfg);
@@ -94,7 +91,7 @@ inline int Run(int argc, char *argv[]) {
   //train routine
   double wall0 = get_wall_time();
   mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 22500 );
-  //mynntrainer->predict(test_path, 20000);
+  //mynntrainer->predict(test_path, 20000, 5);
   double wall1 = get_wall_time();
 
   std::cout << "\nWall Time = " << wall1 - wall0 << std::endl;

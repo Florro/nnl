@@ -27,10 +27,12 @@ class nntrainer{
 public:
 
 	nntrainer(int argc, char *argv[],  std::string net, std::vector < std::pair <std::string, std::string > > cfg):
-		logfile_(net + "/loss.log"), net_(net), cfg_(cfg) {
+		 	  net_(net), cfg_(cfg) {
+
+		  utility::createDir(net, "log");
+		  logfile_ = net + "log/loss.log";
 
 		  ndev_ = argc - 2;
-		  // choose which version to use
 		  for (int i = 2; i < argc; ++i) {
 			 devs_.push_back(atoi(argv[i]));
 		  }
@@ -46,26 +48,28 @@ public:
 
 		  }
 		  nets_[0]->display_dim();
+
+		  batch_size_ = configurator::getbatchsize(cfg_);
+		  epochs_ = configurator::getepochs(cfg_);
+
+		  utility::Check( (float(batch_size_) / float(ndev_) == (batch_size_ / ndev_) ), "Batchsize(%i) has to be divisible by ndev(%i)", batch_size_, ndev_);
 	}
 
 
 	void trainvalidate_batchwise( const std::string & train_path , const std::string & test_path, bool augment_data, unsigned junkSize) {
 
 		  // mini-batch per device
-		  int batch_size = 100;
 		  int num_out = nets_[0]->get_outputdim();
-		  int epochs = nets_[0]->get_max_epoch();
-
-		  int step = batch_size / ndev_;
+		  int step = batch_size_ / ndev_;
 
 		  // Create Batch-loaders for Data with max Junksize and shuffle
-		  dataBatchLoader trainDataLoader(junkSize, true, true, cfg_);
-		  dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
+		  dataload::dataBatchLoader trainDataLoader(junkSize, true, augment_data, cfg_);
+		  dataload::dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
 		  std::cout << std::endl << std::endl;
 
 
 		  //Epochs loop
-		  for (int i = 0; i <= epochs; ++ i){
+		  for (int i = 0; i <= epochs_; ++ i){
 
 			  int b = 1;
 			  while ( !trainDataLoader.finished() ) {
@@ -83,7 +87,7 @@ public:
 					TensorContainer<cpu, 2, real_t> pred;
 					pred.Resize(Shape2(step, num_out));
 
-					for (index_t j = 0; j + batch_size <= trainDataLoader.Data().size(0); j += batch_size) {
+					for (index_t j = 0; j + batch_size_ <= trainDataLoader.Data().size(0); j += batch_size_) {
 					  //set epoch for updater
 					  nets_[tid]->set_epoch(i);
 					  // run forward
@@ -117,8 +121,8 @@ public:
 				  this->predict_batch_(testDataLoader.Data(), testDataLoader.Labels(), nerr, logloss);
 
 				  //save acts and current weights.
-				  if(i == epochs){
-					  std::string holdoutfile = net_ + "/holdout_";
+				  if(i == epochs_){
+					  std::string holdoutfile = net_ + "output/holdout_";
 					  this->write_acts(testDataLoader.Data(), holdoutfile);
 				  }
 
@@ -128,9 +132,9 @@ public:
 			  utility::write_val_to_file< float >(logfile_.c_str(), -(real_t)logloss/testDataLoader.fullSize());
 			  testDataLoader.reset();
 
-			  if(i == epochs or i == 10){
+			  if(i == epochs_ or i == 10){
 				  nets_[0]->Sync();
-				  nets_[0]->save_weights(net_ + "/modelstate/");
+				  nets_[0]->save_weights(net_, i);
 			  }
 
 		  }
@@ -138,13 +142,16 @@ public:
 		}
 
 
-	void predict( const std::string & test_path, unsigned junkSize) {
+	void predict( const std::string & test_path, unsigned junkSize, unsigned epoch) {
 
 		  // mini-batch per device
-		  nets_[0]->load_weights(net_ + "/modelstate/");
+		  for(int i = 0; i < ndev_; i++){
+			  nets_[0]->load_weights(net_, epoch);
+			  nets_[1]->load_weights(net_, epoch);
+		  }
 
 		  // Create Batch-loaders for Data with max Junksize and shuffle
-		  dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
+		  dataload::dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
 		  std::cout << std::endl << std::endl;
 
 		  //Cout logging
@@ -167,9 +174,9 @@ public:
 
 
 	void write_acts(TensorContainer<cpu, 4, real_t> &xtest, std::string outputfile){
-			// mini-batch per device
-		  int batch_size = 100;
-		  int step = batch_size / ndev_;
+		  utility::createDir(net_, "output");
+		  // mini-batch per device
+		  int step = batch_size_ / ndev_;
 		  int num_out = nets_[0]->get_outputdim();
 
 		  // evaluation
@@ -180,8 +187,8 @@ public:
 		  for (index_t j = 0; j + step <= xtest.size(0); j += step) {
 				nets_[0]->Forward(xtest.Slice(j, j + step), pred, false);
 				//Save activations
-				nets_[0]->save_activations(nets_[0]->get_arch_size()-1, outputfile+"softmax.csv");
-				nets_[0]->save_activations(nets_[0]->get_arch_size()-3, outputfile+"lastlayer.csv");
+				nets_[0]->save_activations(nets_[0]->get_arch_size()-1, outputfile+"predictions.csv");
+				nets_[0]->save_activations(nets_[0]->get_arch_size()-3, outputfile+"lastlayer_activations.csv");
 
 		  }
 	}
@@ -205,13 +212,13 @@ private:
 	TensorContainer<cpu, 4, real_t> xtrain_augmented_;
     std::string logfile_;
     std::vector < std::pair <std::string, std::string > > cfg_;
-
+    int batch_size_;
+    int epochs_;
 
     void predict_batch_(TensorContainer<cpu, 4, real_t> &xtest, std::vector<int> &ytest, long & ext_nerr, long & ext_logloss){
 		// mini-batch per device
-		  int batch_size = 100;
 		  int num_out = nets_[0]->get_outputdim();
-		  int step = batch_size / ndev_;
+		  int step = batch_size_ / ndev_;
 
 		  // evaluation
 		  long nerr = 0;
@@ -226,7 +233,7 @@ private:
 			TensorContainer<cpu, 2, real_t> pred;
 			pred.Resize(Shape2(step, num_out));
 
-			for (index_t j = 0; j + batch_size <= xtest.size(0); j += batch_size) {
+			for (index_t j = 0; j + batch_size_ <= xtest.size(0); j += batch_size_) {
 			  nets_[tid]->Forward(xtest.Slice(j + tid * step, j + (tid + 1) * step), pred, false);
 			  for (int k = 0; k < step; ++ k) {
 				nerr   += MaxIndex(pred[k]) != ytest[j + tid * step + k];

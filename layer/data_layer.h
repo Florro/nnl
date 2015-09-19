@@ -15,8 +15,8 @@ class Data_layer : public ILayer<xpu>{
 
 public:
 
-	Data_layer(int c, int x, int y):
-					c_(c), x_(x), y_(y) {};
+	Data_layer(int c, int y, int x):
+					c_(c), y_(y), x_(x) {};
 
 	~Data_layer(){
 		activations_.FreeSpace();
@@ -40,7 +40,7 @@ public:
 
 	void InitLayer(mshadow::Stream<xpu> *stream, Random<xpu, real_t> &rnd){
 		activations_.set_stream(stream);
-		activations_.data.shape_ = Shape4(1,c_,x_,y_);
+		activations_.data.shape_ = Shape4(1,c_,y_,x_);
 	}
 
 
