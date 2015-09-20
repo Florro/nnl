@@ -20,6 +20,7 @@ public:
 			backPropError_(true){}
 
 	void onBatchSizeChanged( int batch_size ){
+		activations_.FreeSpace();
 		activations_.data.shape_ = Shape4(batch_size,
 											 1,
 											 1,

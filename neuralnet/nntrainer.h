@@ -58,7 +58,11 @@ public:
 
 	void trainvalidate_batchwise( const std::string & train_path , const std::string & test_path, bool augment_data, unsigned junkSize) {
 
-		  // mini-batch per device
+		  // mini-batch per device // mini-batch per device
+		  for(int i = 0; i < ndev_; i++){
+			  nets_[i]->load_weights(net_, 0);
+		  }
+
 		  int num_out = nets_[0]->get_outputdim();
 		  int step = batch_size_ / ndev_;
 
@@ -122,12 +126,18 @@ public:
 				  testDataLoader.readBatch();
 				  this->predict_batch_(testDataLoader.Data(), testDataLoader.Labels(), nerr, logloss);
 			  }
-			  printf("%.2f%% ", (1.0 - (real_t)nerr/testDataLoader.fullSize())*100);
-			  printf("logloss %.4f\n", (-(real_t)logloss/testDataLoader.fullSize()));
-			  utility::write_val_to_file< float >(logfile_.c_str(), -(real_t)logloss/testDataLoader.fullSize());
+
+			  //Print logloss/acc test and write to file
+			  real_t acc = (1.0 - (real_t)nerr/testDataLoader.fullSize())*100;
+			  real_t loss = (-(real_t)logloss/testDataLoader.fullSize());
+			  printf("%.2f%% ", acc);
+			  printf("logloss %.4f\n", loss);
+			  utility::write_val_to_file< float >(logfile_.c_str(), acc, false);
+			  utility::write_val_to_file< float >(logfile_.c_str(), loss, true);
+
 			  testDataLoader.reset();
 
-			  if(i == epochs_){
+			  if(((i == epochs_) or (i % 50 == 0) ) and (i != 0)){
 				  nets_[0]->Sync();
 				  nets_[0]->save_weights(net_, i);
 			  }
@@ -158,9 +168,11 @@ public:
 			  this->predict_batch_(testDataLoader.Data(), testDataLoader.Labels(), nerr, logloss);
 
 		  }
-		  printf("%.2f%% ", (1.0 - (real_t)nerr/testDataLoader.fullSize())*100);
-		  printf("logloss %.4f\n", (-(real_t)logloss/testDataLoader.fullSize()));
-		  utility::write_val_to_file< float >(logfile_.c_str(), -(real_t)logloss/testDataLoader.fullSize());
+		  real_t acc = (1.0 - (real_t)nerr/testDataLoader.fullSize())*100;
+		  real_t loss = (-(real_t)logloss/testDataLoader.fullSize());
+		  printf("%.2f%% ", acc);
+		  printf("logloss %.4f\n", loss);
+
 		  testDataLoader.reset();
 
 		  //save acts and current weights.
@@ -169,6 +181,10 @@ public:
 
 		}
 
+	void save_weights(){
+		 nets_[0]->Sync();
+	     nets_[0]->save_weights(net_, 0);
+	}
 
 
 	~nntrainer(){

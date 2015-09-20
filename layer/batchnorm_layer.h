@@ -25,6 +25,7 @@ class batchnorm_layer : public ILayer<xpu> {
   }
 
   void onBatchSizeChanged( int batch_size ){
+	  	activations_.FreeSpace();
 	  	activations_.data.shape_ = inputLayer_->getpAct()->data.shape_;
 		activations_.AllocSpace();
 

@@ -26,7 +26,7 @@ public:
 			psize_(psize), inputLayer_(inputLayer), pstride_(pstride), backPropError(true){	};
 
 	void onBatchSizeChanged( int batch_size ){
-
+		activations_.FreeSpace();
 		activations_.data.shape_ = Shape4(batch_size,
 										  inputLayer_->getpAct()->data.size(1),
 										  std::min(inputLayer_->getpAct()->data.size(2) - psize_ + pstride_ - 1, inputLayer_->getpAct()->data.size(2) - 1) / pstride_ + 1,

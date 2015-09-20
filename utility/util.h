@@ -145,12 +145,16 @@ void write_vec_to_file(const char* outputfile, std::vector< T > &data){
 }
 
 template< typename T >
-void write_val_to_file(const char* outputfile, T val){
+void write_val_to_file(const char* outputfile, T val, bool newline){
 
 	  std::ofstream outputstream (outputfile, ios::app);
 
 	  if (outputstream.is_open()){
-		  outputstream << val << std::endl;
+		  if(newline){
+			  outputstream << val << std::endl;
+		  }else{
+			  outputstream << val << ",";
+		  }
 	  outputstream.close();
 	  }
 	  else{

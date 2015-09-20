@@ -30,6 +30,7 @@ struct augparams{
 
 	std::vector<unsigned> weights_start;
 	std::vector<unsigned> weights_end;
+	unsigned classweights_saturation_epoch;
 
 };
 

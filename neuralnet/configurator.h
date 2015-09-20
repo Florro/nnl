@@ -515,7 +515,7 @@ void setSGDGlobalParams(std::vector < std::pair <std::string, std::string > > &c
 			}
 			else if(!strcmp(name, "epochs")){
 				hyperparam->epochs = atoi(val);
-				utility::Check( hyperparam->epochs  > 0,  "number of epochs must be atleast 1", val );
+				utility::Check( hyperparam->epochs  >= 0,  "number of epochs must be positive", val );
 			}
 			else if(!strcmp(name, "batchsize")){
 				hyperparam->batchsize = atoi(val);
@@ -625,6 +625,7 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 	augparameter.rotation = 0; //other axis commented out
 	augparameter.sheering = 0.0f;
 	augparameter.background = "white";
+	augparameter.classweights_saturation_epoch = 1;
 
 	while(getpair(name, val, cfg[i])){
 			if(!strcmp(name, "trainpath")){
@@ -689,6 +690,11 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 				}
 				augparameter.weights_end.push_back(atoi(str.c_str()));
 			}
+			else if(!strcmp(name, "classweights_saturation_epoch")){
+				augparameter.classweights_saturation_epoch = atoi(val);
+				utility::Check(augparameter.classweights_saturation_epoch > 0, "classweights_saturation_epoch must be positive %s", val);
+			}
+
 			else{
 				utility::Error("Unknown Dataconfig parameter: %s", name);
 			}

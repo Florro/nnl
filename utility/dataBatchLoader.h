@@ -74,6 +74,7 @@ private:
 	void Load_Images_Labels_(const unsigned &);
 	void get_image_dims_();
 	void load_data_list_();
+	std::vector<unsigned> schedule_current_weights(unsigned epoch);
 
 
 private:
@@ -136,17 +137,27 @@ dataBatchLoader::dataBatchLoader(const unsigned int & junkSize, const bool & is_
 	if(mAugmentData_ and is_train_)	myIA_ = new cvimg::ImageAugmenter(augparameter_);
 }
 
+std::vector<unsigned> dataBatchLoader::schedule_current_weights(unsigned epoch){
+	std::vector<unsigned> weights(augparameter_.weights_start.size());
+	for(unsigned i = 0; i < weights.size(); i++){
+		weights[i] = epoch * ((float)augparameter_.weights_end[i] - (float)augparameter_.weights_start[i]) / augparameter_.classweights_saturation_epoch + augparameter_.weights_start[i] ;
+		if(epoch > augparameter_.classweights_saturation_epoch){
+			weights[i] = augparameter_.weights_end[i];
+		}
+	}
+	return weights;
+}
+
 void dataBatchLoader::start_epoch(unsigned epoch){
 
 	// Read image-lists and determine complete datasize
 	this->load_data_list_();
 	//equally weight classes
-	if(is_train_){
-		std::vector<unsigned> current_weights(augparameter_.weights_start.size());
-
+	if(is_train_ and (augparameter_.weights_start.size() != 0)){
+		std::vector<unsigned> current_weights = schedule_current_weights(epoch);
 		unsigned size = mImglst.size();
 		for(unsigned i = 0; i < size; i++){
-			for(unsigned j = 0; j < (augparameter_.weights_start[mImglst[i].first] - 1 ); j++){
+			for(unsigned j = 0; j < (current_weights[mImglst[i].first] - 1 ); j++){
 				mImglst.push_back(mImglst[i]);
 			}
 		}
@@ -157,7 +168,7 @@ void dataBatchLoader::start_epoch(unsigned epoch){
 	// Calculate number of data-batches
 	mNumBatches = ceil(static_cast<float>(mSize_)/ static_cast<float>(mJunkSize_));
 
-	std::cout << "DataSize: " << mSize_ << " JunkSize: " << mJunkSize_ << std::endl;
+	//std::cout << "DataSize: " << mSize_ << " JunkSize: " << mJunkSize_ << std::endl;
 
 	// Random is_train pathlist
 	if (is_train_) std::random_shuffle ( mImglst.begin(), mImglst.end() );
@@ -301,6 +312,7 @@ void dataBatchLoader::reset(void) {
 	mReadCounter_ = 0;
 	mReadPos_ = 0;
 	mNumBatches__ = false;
+	mImglst.clear();
 }
 
 TensorContainer<cpu, 4, real_t> & dataBatchLoader::Data(void) {
