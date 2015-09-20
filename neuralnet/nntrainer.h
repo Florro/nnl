@@ -119,20 +119,13 @@ public:
 			  while ( !testDataLoader.finished() ) {
 				  testDataLoader.readBatch();
 				  this->predict_batch_(testDataLoader.Data(), testDataLoader.Labels(), nerr, logloss);
-
-				  //save acts and current weights.
-				  if(i == epochs_){
-					  std::string holdoutfile = net_ + "output/holdout_";
-					  this->write_acts(testDataLoader.Data(), holdoutfile);
-				  }
-
 			  }
 			  printf("%.2f%% ", (1.0 - (real_t)nerr/testDataLoader.fullSize())*100);
 			  printf("logloss %.4f\n", (-(real_t)logloss/testDataLoader.fullSize()));
 			  utility::write_val_to_file< float >(logfile_.c_str(), -(real_t)logloss/testDataLoader.fullSize());
 			  testDataLoader.reset();
 
-			  if(i == epochs_ or i == 10){
+			  if(i == epochs_){
 				  nets_[0]->Sync();
 				  nets_[0]->save_weights(net_, i);
 			  }
@@ -169,6 +162,11 @@ public:
 		  utility::write_val_to_file< float >(logfile_.c_str(), -(real_t)logloss/testDataLoader.fullSize());
 		  testDataLoader.reset();
 
+		  //save acts and current weights.
+		  std::string holdoutfile = net_ + "output/holdout_";
+		  this->write_acts(testDataLoader.Data(), holdoutfile);
+
+
 
 		}
 
@@ -189,8 +187,21 @@ public:
 				//Save activations
 				nets_[0]->save_activations(nets_[0]->get_arch_size()-1, outputfile+"predictions.csv");
 				nets_[0]->save_activations(nets_[0]->get_arch_size()-3, outputfile+"lastlayer_activations.csv");
-
 		  }
+
+		  //predict last bit of data
+		  int lastbit = xtest.size(0) % step;
+		  int laststart = xtest.size(0) / step;
+		  int lastsize = xtest.size(0) - laststart*step ;
+		  if(lastbit != 0){
+			  // temp output layer
+			  TensorContainer<cpu, 2, real_t> pred;
+			  pred.Resize(Shape2(lastsize, num_out));
+			  nets_[0]->Forward(xtest.Slice(laststart*step, xtest.size(0)), pred, false);
+			  nets_[0]->save_activations(nets_[0]->get_arch_size()-1, outputfile+"predictions.csv");
+			  nets_[0]->save_activations(nets_[0]->get_arch_size()-3, outputfile+"lastlayer_activations.csv");
+		  }
+
 	}
 
 
@@ -224,6 +235,7 @@ private:
 		  long nerr = 0;
 		  long logloss = 0;
 
+
 		  #pragma omp parallel num_threads(ndev_) reduction(+:nerr,logloss)
 		  {
 			int tid = omp_get_thread_num();
@@ -241,6 +253,23 @@ private:
 			  }
 			}
 		  }
+
+		  //predict last bit of data
+		  int lastbit = xtest.size(0) % batch_size_;
+		  int laststart = xtest.size(0) / batch_size_;
+		  int lastsize = xtest.size(0) - laststart*batch_size_ ;
+		  if(lastbit != 0){
+			  // temp output layer
+			  TensorContainer<cpu, 2, real_t> pred;
+			  pred.Resize(Shape2(lastsize, num_out));
+			  nets_[0]->Forward(xtest.Slice(laststart*batch_size_, xtest.size(0)), pred, false);
+			  for (int k = 0; k < lastsize; ++ k) {
+				nerr   += MaxIndex(pred[k]) != ytest[laststart + k];
+				logloss += (save_log(pred[ k ][ytest[laststart + k]]));
+			  }
+		  }
+
+
 
 		  ext_nerr += nerr;
 		  ext_logloss += logloss;

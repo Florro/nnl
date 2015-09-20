@@ -135,7 +135,7 @@ dataBatchLoader::dataBatchLoader(const unsigned int & batchSize, const bool & is
 	//equally weight classes
 	if(is_train){
 		int size = mImglst.size();
-		int weights[] = {0,10,5,15,20};
+		int weights[] = {0,3,3,5,5};
 		for(int i = 0; i < size; i++){
 			if(mImglst[i].first == 0){
 				for(int j = 0; j < weights[0]; j++){
@@ -163,12 +163,9 @@ dataBatchLoader::dataBatchLoader(const unsigned int & batchSize, const bool & is
 				}
 			}
 		}
-		for(int i = 0; i < 70; i++){
-			mImglst.pop_back();
-		}
 	}
-
 	*/
+
 
 	if(mAugmentData_)	myIA_ = new cvimg::ImageAugmenter(augparameter);
 
@@ -248,7 +245,7 @@ void dataBatchLoader::Load_Images_Labels_(const unsigned & size){
 			cv::Vec3b bgr = img.at< cv::Vec3b >(y, x);
 			// store in RGB order
 			for(unsigned k = 0; k < mNumChannels_; k++){
-				mImageData[i][k][y][x] = (float)bgr[k] - avgPixelIntensity[k]; //toDo HARDCODE
+				mImageData[i][k][y][x] = ((float)bgr[k] - avgPixelIntensity[k]) / 256.0f; //toDo HARDCODE
 			}
 		  }
 		}

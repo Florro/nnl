@@ -33,7 +33,7 @@ public:
 	}
 
 	void feedforward(bool is_train){
-		activations_.data = activations_.data / 256.0f; //toDo HARDCODE
+
 	}
 
 	void backpropagate(){}

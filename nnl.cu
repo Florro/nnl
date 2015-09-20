@@ -66,7 +66,7 @@ inline int Run(int argc, char *argv[]) {
   std::string test_path;
 
   //choose data:
-  int data = 1; //0 MNIST, 1 Plankton, 2 retina
+  int data = 2; //0 MNIST, 1 Plankton, 2 retina
 
   std::vector< std::string > imglst_train;
 
@@ -79,7 +79,7 @@ inline int Run(int argc, char *argv[]) {
   }else if (data == 1){
 	  net = "/home/niklas/CXX/nnl/testNets/plankton/net2/";
   }else if (data == 2){
-	  net = "/home/niklas/CXX/nnl/testNets/retina/net256_fc_local_mean/";
+	  net = "/home/niklas/CXX/nnl/testNets/retina/test/";
   }
 
   //Read config file
@@ -90,8 +90,8 @@ inline int Run(int argc, char *argv[]) {
 
   //train routine
   double wall0 = get_wall_time();
-  mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 22500 );
-  //mynntrainer->predict(test_path, 20000, 5);
+  //mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 100000 );
+  mynntrainer->predict(test_path, 20000, 200);
   double wall1 = get_wall_time();
 
   std::cout << "\nWall Time = " << wall1 - wall0 << std::endl;
