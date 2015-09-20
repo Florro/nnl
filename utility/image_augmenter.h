@@ -28,6 +28,9 @@ struct augparams{
 	real_t sheering;
 	std::string background;
 
+	std::vector<unsigned> weights_start;
+	std::vector<unsigned> weights_end;
+
 };
 
 

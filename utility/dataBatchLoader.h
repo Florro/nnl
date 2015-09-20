@@ -35,7 +35,7 @@ public:
 	virtual ~dataBatchLoader(void);
 
 	/*
-	 * Reads one databatch of size 'mBatchSize_'
+	 * Reads one databatch of size 'mJunkSize_'
 	 */
 	void readBatch(void);
 
@@ -68,6 +68,7 @@ public:
 	 */
 	const unsigned int & fullSize(void) const;
 
+	void start_epoch(unsigned epoch);
 
 private:
 	void Load_Images_Labels_(const unsigned &);
@@ -79,10 +80,12 @@ private:
 
 	unsigned int mPicSize_;					// picture-side length
 	unsigned int mNumChannels_;
-	unsigned int mBatchSize_;				// chunk-size
+	unsigned int mJunkSize_;				// chunk-size
+	unsigned int maxJunkSize_;
 	unsigned int mReadCounter_;				// counter for number of batches
 	unsigned int mReadPos_;					// current read position in the path-list
-	bool mRandomis_train_;
+	unsigned int epoch_count_;              // count epochs
+	bool is_train_;
 	bool mAugmentData_;
 	std::vector < std::pair <std::string, std::string > > cfg_;
 
@@ -91,6 +94,7 @@ private:
 	bool mNumBatches__;						// state of the reader
 	unsigned int mNumBatches;				// number of data-reads
 	cvimg::ImageAugmenter* myIA_;                  // data structure to augment data
+	cvimg::augparams augparameter_;
 
 	std::vector < std::pair < int, std::string > > mImglst; // Train and test labels and datapath lists
 
@@ -98,27 +102,28 @@ private:
 	TensorContainer<cpu, 4, real_t> mImageData;		// Train and testdata container
 
 	std::vector<int> mLabels;					// labels of the current batch
+
 };
 
 dataBatchLoader:: ~dataBatchLoader(void){
 	delete(myIA_);
 }
 
-dataBatchLoader::dataBatchLoader(const unsigned int & batchSize, const bool & is_train, const bool & augmentData, std::vector < std::pair <std::string, std::string > > &cfg)
-: mPicSize_(0), mBatchSize_(batchSize), mNumChannels_(0),
-  mReadCounter_(0), mReadPos_(0), mRandomis_train_(is_train), mSize_(0), mPath_(""), mNumBatches__(false),
+dataBatchLoader::dataBatchLoader(const unsigned int & junkSize, const bool & is_train, const bool & augmentData, std::vector < std::pair <std::string, std::string > > &cfg)
+: mPicSize_(0), maxJunkSize_(junkSize), mJunkSize_(0), mNumBatches(0), mNumChannels_(0),
+  mReadCounter_(0), mReadPos_(0), is_train_(is_train), mSize_(0), mPath_(""), mNumBatches__(false),
   mAugmentData_(augmentData), myIA_(NULL),
-  cfg_(cfg)
+  cfg_(cfg),
+  epoch_count_(0)
 {
 
 	std::string trainpath;
 	std::string testpath;
-	cvimg::augparams augparameter;
 
 	configurator::readDataConfig(cfg_,
 							   trainpath,
 							   testpath,
-							   augparameter );
+							   augparameter_ );
 
     mPath_ = is_train ? trainpath : testpath;
 
@@ -128,63 +133,40 @@ dataBatchLoader::dataBatchLoader(const unsigned int & batchSize, const bool & is
 	// Set picture side length
 	this->get_image_dims_();
 
+	if(mAugmentData_ and is_train_)	myIA_ = new cvimg::ImageAugmenter(augparameter_);
+}
+
+void dataBatchLoader::start_epoch(unsigned epoch){
+
 	// Read image-lists and determine complete datasize
 	this->load_data_list_();
-
-	/*
 	//equally weight classes
-	if(is_train){
-		int size = mImglst.size();
-		int weights[] = {0,3,3,5,5};
-		for(int i = 0; i < size; i++){
-			if(mImglst[i].first == 0){
-				for(int j = 0; j < weights[0]; j++){
-					mImglst.push_back(mImglst[i]);
-				}
-			}
-			else if(mImglst[i].first == 1){
-				for(int j = 0; j < weights[1]; j++){
-					mImglst.push_back(mImglst[i]);
-				}
-			}
-			else if(mImglst[i].first == 1){
-				for(int j = 0; j < weights[2]; j++){
-					mImglst.push_back(mImglst[i]);
-				}
-			}
-			else if(mImglst[i].first == 1){
-				for(int j = 0; j < weights[3]; j++){
-					mImglst.push_back(mImglst[i]);
-				}
-			}
-			else if(mImglst[i].first == 1){
-				for(int j = 0; j < weights[4]; j++){
-					mImglst.push_back(mImglst[i]);
-				}
+	if(is_train_){
+		std::vector<unsigned> current_weights(augparameter_.weights_start.size());
+
+		unsigned size = mImglst.size();
+		for(unsigned i = 0; i < size; i++){
+			for(unsigned j = 0; j < (augparameter_.weights_start[mImglst[i].first] - 1 ); j++){
+				mImglst.push_back(mImglst[i]);
 			}
 		}
 	}
-	*/
-
-
-	if(mAugmentData_)	myIA_ = new cvimg::ImageAugmenter(augparameter);
 
 	mSize_ = mImglst.size();
-	mBatchSize_ = std::min(batchSize, mSize_);
-
+	mJunkSize_ = std::min(maxJunkSize_, mSize_);
 	// Calculate number of data-batches
-	mNumBatches = ceil(static_cast<float>(mSize_)/ static_cast<float>(mBatchSize_));
+	mNumBatches = ceil(static_cast<float>(mSize_)/ static_cast<float>(mJunkSize_));
 
-	std::cout << "DataSize: " << mSize_ << " JunkSize: " << mBatchSize_ << std::endl;
+	std::cout << "DataSize: " << mSize_ << " JunkSize: " << mJunkSize_ << std::endl;
+
+	// Random is_train pathlist
+	if (is_train_) std::random_shuffle ( mImglst.begin(), mImglst.end() );
+
+
 }
 
 
 void dataBatchLoader::readBatch(void) {
-
-	// Random is_train pathlist
-	if ( mReadCounter_ == 0 and mRandomis_train_) {
-		std::random_shuffle ( mImglst.begin(), mImglst.end() );
-	}
 
 	// Only read next batch if neccessary
 	if ( mReadPos_ < mSize_ ) {
@@ -192,7 +174,7 @@ void dataBatchLoader::readBatch(void) {
 		// Deterimine size of next batch
 		unsigned int size = mSize_ - mReadPos_;	// Read data so far
 
-		size =	std::min(mBatchSize_, size);
+		size =	std::min(mJunkSize_, size);
 
 		// Resize data-container
 		mImageData.Resize(Shape4(size, mNumChannels_, mPicSize_, mPicSize_));

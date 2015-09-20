@@ -64,13 +64,12 @@ public:
 
 		  // Create Batch-loaders for Data with max Junksize and shuffle
 		  dataload::dataBatchLoader trainDataLoader(junkSize, true, augment_data, cfg_);
-		  dataload::dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
-		  std::cout << std::endl << std::endl;
-
 
 		  //Epochs loop
 		  for (int i = 0; i <= epochs_; ++ i){
 
+
+			  trainDataLoader.start_epoch(i);
 			  int b = 1;
 			  while ( !trainDataLoader.finished() ) {
 
@@ -112,6 +111,9 @@ public:
 
 
 			  //Cout logging
+			  dataload::dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
+			  testDataLoader.start_epoch(0);
+
 			  std::cout << "Test: ";
 
 			  long nerr = 0;
@@ -139,13 +141,12 @@ public:
 
 		  // mini-batch per device
 		  for(int i = 0; i < ndev_; i++){
-			  nets_[0]->load_weights(net_, epoch);
-			  nets_[1]->load_weights(net_, epoch);
+			  nets_[i]->load_weights(net_, epoch);
 		  }
 
 		  // Create Batch-loaders for Data with max Junksize and shuffle
 		  dataload::dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
-		  std::cout << std::endl << std::endl;
+		  testDataLoader.start_epoch(0);
 
 		  //Cout logging
 		  std::cout << "Test: ";

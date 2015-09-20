@@ -626,7 +626,6 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 	augparameter.sheering = 0.0f;
 	augparameter.background = "white";
 
-
 	while(getpair(name, val, cfg[i])){
 			if(!strcmp(name, "trainpath")){
 				trainpath = val;
@@ -663,6 +662,32 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 			else if(!strcmp(name, "background")){
 				augparameter.background = val;
 				utility::Check(augparameter.background == "white" || augparameter.background == "black" || augparameter.background == "gray", "background must be either black, white or gray %s", val);
+			}
+			else if(!strcmp(name, "classweights_start")){
+				std::string str(val);
+				std::string delimiter = ",";
+
+				size_t pos = 0;
+				std::string token;
+				while ((pos = str.find(delimiter)) != std::string::npos) {
+				    token = str.substr(0, pos);
+				    augparameter.weights_start.push_back(atoi(token.c_str()));
+				    str.erase(0, pos + delimiter.length());
+				}
+				augparameter.weights_start.push_back(atoi(str.c_str()));
+			}
+			else if(!strcmp(name, "classweights_end")){
+				std::string str(val);
+				std::string delimiter = ",";
+
+				size_t pos = 0;
+				std::string token;
+				while ((pos = str.find(delimiter)) != std::string::npos) {
+					token = str.substr(0, pos);
+					augparameter.weights_end.push_back(atoi(token.c_str()));
+					str.erase(0, pos + delimiter.length());
+				}
+				augparameter.weights_end.push_back(atoi(str.c_str()));
 			}
 			else{
 				utility::Error("Unknown Dataconfig parameter: %s", name);
