@@ -90,8 +90,16 @@ inline int Run(int argc, char *argv[]) {
 
   //train routine
   double wall0 = get_wall_time();
-  //mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 100000 );
-  mynntrainer->predict(test_path, 20000, 200);
+  if(!strcmp(argv[argc-1], "train")){
+	  mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 100000 );
+  }else if (!strcmp(argv[argc-1], "predict")){
+	  mynntrainer->predict(100000, 200);
+  }
+  else{
+	  utility::Error("Unknown control parameter: %s, use train/predict", argv[argc-1]);
+  }
+
+
   double wall1 = get_wall_time();
 
   std::cout << "\nWall Time = " << wall1 - wall0 << std::endl;

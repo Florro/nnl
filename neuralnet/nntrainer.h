@@ -32,8 +32,8 @@ public:
 		  utility::createDir(net, "log");
 		  logfile_ = net + "log/loss.log";
 
-		  ndev_ = argc - 2;
-		  for (int i = 2; i < argc; ++i) {
+		  ndev_ = argc - 3;
+		  for (int i = 2; i < (argc - 1); ++i) {
 			 devs_.push_back(atoi(argv[i]));
 		  }
 
@@ -135,7 +135,7 @@ public:
 		}
 
 
-	void predict( const std::string & test_path, unsigned junkSize, unsigned epoch) {
+	void predict( unsigned junkSize, unsigned epoch) {
 
 		  // mini-batch per device
 		  for(int i = 0; i < ndev_; i++){
@@ -164,45 +164,10 @@ public:
 
 		  //save acts and current weights.
 		  std::string holdoutfile = net_ + "output/holdout_";
-		  this->write_acts(testDataLoader.Data(), holdoutfile);
-
-
+		  this->write_acts_(testDataLoader.Data(), holdoutfile);
 
 		}
 
-
-	void write_acts(TensorContainer<cpu, 4, real_t> &xtest, std::string outputfile){
-		  utility::createDir(net_, "output");
-		  // mini-batch per device
-		  int step = batch_size_ / ndev_;
-		  int num_out = nets_[0]->get_outputdim();
-
-		  // evaluation
-		  mshadow::SetDevice<xpu>(devs_[0]);
-		  TensorContainer<cpu, 2, real_t> pred;
-		  pred.Resize(Shape2(step, num_out));
-
-		  for (index_t j = 0; j + step <= xtest.size(0); j += step) {
-				nets_[0]->Forward(xtest.Slice(j, j + step), pred, false);
-				//Save activations
-				nets_[0]->save_activations(nets_[0]->get_arch_size()-1, outputfile+"predictions.csv");
-				nets_[0]->save_activations(nets_[0]->get_arch_size()-3, outputfile+"lastlayer_activations.csv");
-		  }
-
-		  //predict last bit of data
-		  int lastbit = xtest.size(0) % step;
-		  int laststart = xtest.size(0) / step;
-		  int lastsize = xtest.size(0) - laststart*step ;
-		  if(lastbit != 0){
-			  // temp output layer
-			  TensorContainer<cpu, 2, real_t> pred;
-			  pred.Resize(Shape2(lastsize, num_out));
-			  nets_[0]->Forward(xtest.Slice(laststart*step, xtest.size(0)), pred, false);
-			  nets_[0]->save_activations(nets_[0]->get_arch_size()-1, outputfile+"predictions.csv");
-			  nets_[0]->save_activations(nets_[0]->get_arch_size()-3, outputfile+"lastlayer_activations.csv");
-		  }
-
-	}
 
 
 	~nntrainer(){
@@ -275,7 +240,38 @@ private:
 		  ext_logloss += logloss;
 	}
 
+    void write_acts_(TensorContainer<cpu, 4, real_t> &xtest, std::string outputfile){
+    		  utility::createDir(net_, "output");
+    		  // mini-batch per device
+    		  int step = batch_size_ / ndev_;
+    		  int num_out = nets_[0]->get_outputdim();
 
+    		  // evaluation
+    		  mshadow::SetDevice<xpu>(devs_[0]);
+    		  TensorContainer<cpu, 2, real_t> pred;
+    		  pred.Resize(Shape2(step, num_out));
+
+    		  for (index_t j = 0; j + step <= xtest.size(0); j += step) {
+    				nets_[0]->Forward(xtest.Slice(j, j + step), pred, false);
+    				//Save activations
+    				nets_[0]->save_activations(nets_[0]->get_arch_size()-1, outputfile+"predictions.csv");
+    				nets_[0]->save_activations(nets_[0]->get_arch_size()-3, outputfile+"lastlayer_activations.csv");
+    		  }
+
+    		  //predict last bit of data
+    		  int lastbit = xtest.size(0) % step;
+    		  int laststart = xtest.size(0) / step;
+    		  int lastsize = xtest.size(0) - laststart*step ;
+    		  if(lastbit != 0){
+    			  // temp output layer
+    			  TensorContainer<cpu, 2, real_t> pred;
+    			  pred.Resize(Shape2(lastsize, num_out));
+    			  nets_[0]->Forward(xtest.Slice(laststart*step, xtest.size(0)), pred, false);
+    			  nets_[0]->save_activations(nets_[0]->get_arch_size()-1, outputfile+"predictions.csv");
+    			  nets_[0]->save_activations(nets_[0]->get_arch_size()-3, outputfile+"lastlayer_activations.csv");
+    		  }
+
+    	}
 
 
 

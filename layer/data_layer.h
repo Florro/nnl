@@ -32,9 +32,7 @@ public:
 		activations_.AllocSpace();
 	}
 
-	void feedforward(bool is_train){
-
-	}
+	void feedforward(bool is_train){}
 
 	void backpropagate(){}
 
