@@ -249,6 +249,7 @@ void setConvolutionLayer(std::vector < std::pair <std::string, std::string > > &
 	int filter_n = 32;
 	int stride = 1;
 	int padding = 0;
+	const char* acttype = "none";
 	real_t weightsInit = 0.0f;
 
 	const char *name = "empty";
@@ -284,6 +285,10 @@ void setConvolutionLayer(std::vector < std::pair <std::string, std::string > > &
 			weightsInit = atof(val);
 			utility::Check(weightsInit >= 0, "weightInit has to be positive");
 		}
+		else if(!strcmp(name, "act_type")){
+			acttype = (val);
+			utility::Check(strcmp(name, "ReLU") or strcmp(name, "leakyReLU"), "Supported Activations: ReLU, leakyReLU, you entered: %s", val);
+		}
 		else{
 			utility::Error("Unknown Convolution Layer Parameter: %s", name);
 		}
@@ -293,6 +298,14 @@ void setConvolutionLayer(std::vector < std::pair <std::string, std::string > > &
 	architecture.push_back(new Conv_cudnn_layer<xpu>(architecture.back(), filter_sl, stride, filter_n, padding, weightsInit ));
 	architecture.back()->InitLayer(stream,rnd);
 	i--;
+
+	if(!strcmp(acttype, "ReLU")){
+		architecture.push_back(new activation_layer<xpu, relu_op, relu_grad>(architecture.back()));
+		architecture.back()->InitLayer(stream,rnd);
+	}else if(!strcmp(acttype, "leakyReLU")){
+		architecture.push_back(new activation_layer<xpu, leaky_relu_op, leaky_relu_grad>(architecture.back()));
+		architecture.back()->InitLayer(stream,rnd);
+	}
 }
 
 template<typename xpu>
@@ -330,6 +343,8 @@ template<typename xpu>
 void setStandardLayer(std::vector < std::pair <std::string, std::string > > &cfg, int &i, std::vector< ILayer<xpu>* > &architecture, mshadow::Stream<xpu> *stream, Random<xpu, real_t> &rnd){
 
 	int layerDim = 100;
+	const char* acttype = "none";
+	real_t dropout = 0.0f;
 
 	const char *name = "empty";
 	const char *val = "empty";
@@ -339,6 +354,14 @@ void setStandardLayer(std::vector < std::pair <std::string, std::string > > &cfg
 		if(!strcmp(name, "layerDim")){
 			layerDim = atoi(val);
 			utility::Check(layerDim > 1, "standard layerdim has to be greater than 1");
+		}
+		else if(!strcmp(name, "act_type")){
+			acttype = (val);
+			utility::Check(strcmp(name, "ReLU") or strcmp(name, "leakyReLU"), "Supported Activations: ReLU, leakyReLU, you entered: %s", val);
+		}
+		else if(!strcmp(name, "dropout")){
+			dropout = atof(val);
+			utility::Check(dropout < 1.0f && dropout > 0.0f, "dropout must be between 0 and 1");
 		}
 		else{
 			utility::Error("Unknown Standard Layer Parameter: %s", name);
@@ -353,6 +376,19 @@ void setStandardLayer(std::vector < std::pair <std::string, std::string > > &cfg
 	architecture.push_back(new Standard_layer<xpu>(architecture.back(), layerDim));
 	architecture.back()->InitLayer(stream,rnd);
 	i--;
+
+	if(!strcmp(acttype, "ReLU")){
+		architecture.push_back(new activation_layer<xpu, relu_op, relu_grad>(architecture.back()));
+		architecture.back()->InitLayer(stream,rnd);
+	}else if(!strcmp(acttype, "leakyReLU")){
+		architecture.push_back(new activation_layer<xpu, leaky_relu_op, leaky_relu_grad>(architecture.back()));
+		architecture.back()->InitLayer(stream,rnd);
+	}
+	if(dropout != 0.0f){
+		architecture.push_back(new Dropout_layer<xpu>(architecture.back(), dropout));
+		architecture.back()->InitLayer(stream,rnd);
+	}
+
 }
 
 template<typename xpu>

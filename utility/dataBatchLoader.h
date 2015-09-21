@@ -163,12 +163,14 @@ void dataBatchLoader::start_epoch(unsigned epoch){
 		}
 	}
 
+
+
 	mSize_ = mImglst.size();
 	mJunkSize_ = std::min(maxJunkSize_, mSize_);
 	// Calculate number of data-batches
 	mNumBatches = ceil(static_cast<float>(mSize_)/ static_cast<float>(mJunkSize_));
 
-	//std::cout << "DataSize: " << mSize_ << " JunkSize: " << mJunkSize_ << std::endl;
+	if(epoch_count_ == 0) std::cout << "DataSize: " << mSize_ << " JunkSize: " << mJunkSize_ << std::endl;
 
 	// Random is_train pathlist
 	if (is_train_) std::random_shuffle ( mImglst.begin(), mImglst.end() );
@@ -313,6 +315,7 @@ void dataBatchLoader::reset(void) {
 	mReadPos_ = 0;
 	mNumBatches__ = false;
 	mImglst.clear();
+	epoch_count_++;
 }
 
 TensorContainer<cpu, 4, real_t> & dataBatchLoader::Data(void) {

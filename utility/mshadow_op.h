@@ -25,7 +25,7 @@ struct relu_grad {
 struct leaky_relu_op{
   MSHADOW_XINLINE static real_t Map(real_t a) {
     using namespace std;
-    return a > 0.0f ? a : (a / 3.0f);
+    return a > 0.0f ? a : (a * 0.01);
   }
 };
 struct leaky_relu_grad {

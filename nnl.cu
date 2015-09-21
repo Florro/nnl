@@ -79,7 +79,7 @@ inline int Run(int argc, char *argv[]) {
   }else if (data == 1){
 	  net = "/home/niklas/CXX/nnl/testNets/plankton/net2/";
   }else if (data == 2){
-	  net = "/home/niklas/CXX/nnl/testNets/retina/net256_balanced/";
+	  net = "/home/niklas/CXX/nnl/testNets/retina/net128_merge/";
   }
 
   //Read config file
@@ -92,9 +92,9 @@ inline int Run(int argc, char *argv[]) {
   double wall0 = get_wall_time();
   if(!strcmp(argv[argc-1], "train")){
 	  //mynntrainer->save_weights();
-	  mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 30000 );
+	  mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 100000 );
   }else if (!strcmp(argv[argc-1], "predict")){
-	  mynntrainer->predict(30000, 200);
+	  mynntrainer->predict(100000, 150);
   }
   else{
 	  utility::Error("Unknown control parameter: %s, use train/predict", argv[argc-1]);

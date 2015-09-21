@@ -58,10 +58,10 @@ public:
 
 	void trainvalidate_batchwise( const std::string & train_path , const std::string & test_path, bool augment_data, unsigned junkSize) {
 
-		  // mini-batch per device // mini-batch per device
-		  for(int i = 0; i < ndev_; i++){
-			  nets_[i]->load_weights(net_, 0);
-		  }
+		  // load weights
+		  //for(int i = 0; i < ndev_; i++){
+			  //nets_[i]->load_weights(net_, 0);
+		  //}
 
 		  int num_out = nets_[0]->get_outputdim();
 		  int step = batch_size_ / ndev_;
