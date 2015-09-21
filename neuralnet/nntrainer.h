@@ -116,7 +116,7 @@ public:
 
 			  //Cout logging
 			  dataload::dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
-			  testDataLoader.start_epoch(0);
+			  testDataLoader.start_epoch(1);
 
 			  std::cout << "Test: ";
 
@@ -156,7 +156,7 @@ public:
 
 		  // Create Batch-loaders for Data with max Junksize and shuffle
 		  dataload::dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
-		  testDataLoader.start_epoch(0);
+		  testDataLoader.start_epoch(1);
 
 		  //Cout logging
 		  std::cout << "Test: ";

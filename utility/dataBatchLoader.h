@@ -150,11 +150,13 @@ std::vector<unsigned> dataBatchLoader::schedule_current_weights(unsigned epoch){
 
 void dataBatchLoader::start_epoch(unsigned epoch){
 
+	epoch_count_ = epoch;
+
 	// Read image-lists and determine complete datasize
 	this->load_data_list_();
 	//equally weight classes
 	if(is_train_ and (augparameter_.weights_start.size() != 0)){
-		std::vector<unsigned> current_weights = schedule_current_weights(epoch);
+		std::vector<unsigned> current_weights = schedule_current_weights(epoch_count_);
 		unsigned size = mImglst.size();
 		for(unsigned i = 0; i < size; i++){
 			for(unsigned j = 0; j < (current_weights[mImglst[i].first] - 1 ); j++){
@@ -315,7 +317,6 @@ void dataBatchLoader::reset(void) {
 	mReadPos_ = 0;
 	mNumBatches__ = false;
 	mImglst.clear();
-	epoch_count_++;
 }
 
 TensorContainer<cpu, 4, real_t> & dataBatchLoader::Data(void) {
