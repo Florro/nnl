@@ -58,6 +58,9 @@ public:
 
 	void trainvalidate_batchwise( const std::string & train_path , const std::string & test_path, bool augment_data, unsigned junkSize) {
 
+
+
+
 		  // load weights
 		  //for(int i = 0; i < ndev_; i++){
 			  //nets_[i]->load_weights(net_, 0);
@@ -102,8 +105,8 @@ public:
 
 				  // evaluation
 				  printf("Epoch: %i, Masterbatch: %u/%u, Train: ", i, b, trainDataLoader.numBatches());
-				  long train_nerr = 0;
-				  long train_logloss = 0;
+				  real_t train_nerr = 0;
+				  real_t train_logloss = 0;
 				  this->predict_batch_(trainDataLoader.Data(), trainDataLoader.Labels(), train_nerr, train_logloss);
 				  printf("%.2f%% ", (1.0 - (real_t)train_nerr/trainDataLoader.Data().size(0))*100);
 				  printf("logloss %.4f\n", (-(real_t)train_logloss/trainDataLoader.Data().size(0)));
@@ -120,8 +123,8 @@ public:
 
 			  std::cout << "Test: ";
 
-			  long nerr = 0;
-			  long logloss = 0;
+			  real_t nerr = 0;
+			  real_t logloss = 0;
 			  while ( !testDataLoader.finished() ) {
 				  testDataLoader.readBatch();
 				  this->predict_batch_(testDataLoader.Data(), testDataLoader.Labels(), nerr, logloss);
@@ -161,8 +164,8 @@ public:
 		  //Cout logging
 		  std::cout << "Test: ";
 
-		  long nerr = 0;
-		  long logloss = 0;
+		  real_t nerr = 0;
+		  real_t logloss = 0;
 		  while ( !testDataLoader.finished() ) {
 			  testDataLoader.readBatch();
 			  this->predict_batch_(testDataLoader.Data(), testDataLoader.Labels(), nerr, logloss);
@@ -208,14 +211,14 @@ private:
     int batch_size_;
     int epochs_;
 
-    void predict_batch_(TensorContainer<cpu, 4, real_t> &xtest, std::vector<int> &ytest, long & ext_nerr, long & ext_logloss){
+    void predict_batch_(TensorContainer<cpu, 4, real_t> &xtest, std::vector<int> &ytest, real_t & ext_nerr, real_t & ext_logloss){
 		// mini-batch per device
 		  int num_out = nets_[0]->get_outputdim();
 		  int step = batch_size_ / ndev_;
 
 		  // evaluation
-		  long nerr = 0;
-		  long logloss = 0;
+		  real_t nerr = 0;
+		  real_t logloss = 0;
 
 
 		  #pragma omp parallel num_threads(ndev_) reduction(+:nerr,logloss)

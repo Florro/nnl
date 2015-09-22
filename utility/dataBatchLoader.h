@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <ctime>
 #include "../neuralnet/configurator.h"
+#include "../utility/RNGen.h"
 
 namespace dataload{
 
@@ -74,7 +75,7 @@ private:
 	void Load_Images_Labels_(const unsigned &);
 	void get_image_dims_();
 	void load_data_list_();
-	std::vector<unsigned> schedule_current_weights(unsigned epoch);
+	std::vector< real_t > schedule_current_weights(unsigned epoch);
 
 
 private:
@@ -104,10 +105,12 @@ private:
 
 	std::vector<int> mLabels;					// labels of the current batch
 
+	RNGen* myRand_;
 };
 
 dataBatchLoader:: ~dataBatchLoader(void){
 	delete(myIA_);
+	delete(myRand_);
 }
 
 dataBatchLoader::dataBatchLoader(const unsigned int & junkSize, const bool & is_train, const bool & augmentData, std::vector < std::pair <std::string, std::string > > &cfg)
@@ -135,10 +138,12 @@ dataBatchLoader::dataBatchLoader(const unsigned int & junkSize, const bool & is_
 	this->get_image_dims_();
 
 	if(mAugmentData_ and is_train_)	myIA_ = new cvimg::ImageAugmenter(augparameter_);
+
+	myRand_ = new RNGen();
 }
 
-std::vector<unsigned> dataBatchLoader::schedule_current_weights(unsigned epoch){
-	std::vector<unsigned> weights(augparameter_.weights_start.size());
+std::vector< real_t > dataBatchLoader::schedule_current_weights(unsigned epoch){
+	std::vector< real_t > weights(augparameter_.weights_start.size());
 	for(unsigned i = 0; i < weights.size(); i++){
 		weights[i] = epoch * ((float)augparameter_.weights_end[i] - (float)augparameter_.weights_start[i]) / augparameter_.classweights_saturation_epoch + augparameter_.weights_start[i] ;
 		if(epoch > augparameter_.classweights_saturation_epoch){
@@ -154,19 +159,23 @@ void dataBatchLoader::start_epoch(unsigned epoch){
 
 	// Read image-lists and determine complete datasize
 	this->load_data_list_();
-	//equally weight classes
+
+
+	//weight classes
 	if(is_train_ and (augparameter_.weights_start.size() != 0)){
-		std::vector<unsigned> current_weights = schedule_current_weights(epoch_count_);
+		std::vector< real_t > current_weights = schedule_current_weights(epoch_count_);
 		unsigned size = mImglst.size();
 		for(unsigned i = 0; i < size; i++){
-			for(unsigned j = 0; j < (current_weights[mImglst[i].first] - 1 ); j++){
+			real_t prop = current_weights[mImglst[i].first] - 1;
+			while(prop >= 1.0f){
 				mImglst.push_back(mImglst[i]);
+				prop = prop - 1.0f;
 			}
+			if(myRand_->bernoulli(prop)) mImglst.push_back(mImglst[i]);
 		}
 	}
 
-
-
+	//Set sizes
 	mSize_ = mImglst.size();
 	mJunkSize_ = std::min(maxJunkSize_, mSize_);
 	// Calculate number of data-batches

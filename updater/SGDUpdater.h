@@ -85,17 +85,17 @@ private:
 		if(hyperparams_->clipgradient != 0.0f){
 			if (!is_bias) {
 				momentum_gradient *= hyperparams_->momentum;
-				momentum_gradient += (-hyperparams_->learning_rate) * (hyperparams_->weightdecay * weight + F<clip>(grad, hyperparams_->clipgradient));
+				momentum_gradient += (-hyperparams_->learning_rate) * (hyperparams_->weightdecay * weight + 1.0f/hyperparams_->batchsize * F<clip>(grad, hyperparams_->clipgradient));
 			} else {
-				momentum_gradient = (-hyperparams_->learning_rate) * F<clip>(grad, hyperparams_->clipgradient);
+				momentum_gradient = (-hyperparams_->learning_rate) * 1.0f/hyperparams_->batchsize * F<clip>(grad, hyperparams_->clipgradient);
 			}
 		}
 		else{
 			if (!is_bias) {
 				momentum_gradient *= hyperparams_->momentum;
-				momentum_gradient += (-hyperparams_->learning_rate) * (hyperparams_->weightdecay * weight + grad);
+				momentum_gradient += (-hyperparams_->learning_rate) * (hyperparams_->weightdecay * weight + 1.0f/hyperparams_->batchsize * grad);
 			} else {
-				momentum_gradient = (-hyperparams_->learning_rate) * grad;
+				momentum_gradient = (-hyperparams_->learning_rate) * 1.0f/hyperparams_->batchsize * grad;
 			}
 		}
 

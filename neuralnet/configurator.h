@@ -708,10 +708,11 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 				std::string token;
 				while ((pos = str.find(delimiter)) != std::string::npos) {
 				    token = str.substr(0, pos);
-				    augparameter.weights_start.push_back(atoi(token.c_str()));
+				    augparameter.weights_start.push_back(atof(token.c_str()));
 				    str.erase(0, pos + delimiter.length());
 				}
-				augparameter.weights_start.push_back(atoi(str.c_str()));
+				augparameter.weights_start.push_back(atof(str.c_str()));
+
 			}
 			else if(!strcmp(name, "classweights_end")){
 				std::string str(val);
@@ -721,10 +722,10 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 				std::string token;
 				while ((pos = str.find(delimiter)) != std::string::npos) {
 					token = str.substr(0, pos);
-					augparameter.weights_end.push_back(atoi(token.c_str()));
+					augparameter.weights_end.push_back(atof(token.c_str()));
 					str.erase(0, pos + delimiter.length());
 				}
-				augparameter.weights_end.push_back(atoi(str.c_str()));
+				augparameter.weights_end.push_back(atof(str.c_str()));
 			}
 			else if(!strcmp(name, "classweights_saturation_epoch")){
 				augparameter.classweights_saturation_epoch = atoi(val);
