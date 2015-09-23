@@ -14,6 +14,32 @@ namespace utility {
 using namespace mshadow;
 using namespace std;
 
+#define PROFILE(call) do{ \
+		cudaEvent_t start, stop; \
+		cudaEventCreate( &start );\
+		cudaEventCreate( &stop );\
+		cudaEventRecord( start, 0 );\
+		call; \
+		cudaEventRecord( stop, 0 );\
+		cudaEventSynchronize( stop );	\
+		float elapsedTime;\
+		cudaEventElapsedTime( &elapsedTime, start, stop );\
+		std::cout << "( " << elapsedTime / (float) 1000 << "s ) ";\
+		cudaEventDestroy( start );\
+		cudaEventDestroy( stop  );\
+		} while(0);
+
+// helper function to messure wall time
+double get_wall_time(){
+    struct timeval time;
+    if (gettimeofday(&time,NULL)){
+        //  Handle error
+        return 0;
+    }
+    return (double)time.tv_sec + (double)time.tv_usec * .000001;
+}
+
+
 int pack(unsigned char zz[4]){
     return (int)(zz[3]) 
         | (((int)(zz[2])) << 8)

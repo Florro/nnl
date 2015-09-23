@@ -13,6 +13,40 @@
 #include "neural_net.h"
 #include "../utility/dataBatchLoader.h"
 
+#define PROFILE(call) do{ \
+		cudaEvent_t start, stop; \
+		cudaEventCreate( &start );\
+		cudaEventCreate( &stop );\
+		cudaEventRecord( start, 0 );\
+		call; \
+		cudaEventRecord( stop, 0 );\
+		cudaEventSynchronize( stop );	\
+		float elapsedTime;\
+		cudaEventElapsedTime( &elapsedTime, start, stop );\
+		std::cout << "( " << elapsedTime / (float) 1000 << "s ) ";\
+		cudaEventDestroy( start );\
+		cudaEventDestroy( stop  );\
+		} while(0);
+
+void start_time_messure(cudaEvent_t &start, cudaEvent_t &stop){
+	  cudaEventCreate( &start );
+	  cudaEventCreate( &stop );
+	  cudaEventRecord( start, 0 );
+}
+
+float stop_time_messure(cudaEvent_t &start, cudaEvent_t &stop){
+	cudaEventRecord( stop, 0 );
+	cudaEventSynchronize( stop );
+	float elapsedTime;
+	cudaEventElapsedTime( &elapsedTime, start, stop );
+	cudaEventDestroy( start );
+	cudaEventDestroy( stop  );
+
+	return elapsedTime / (float)1000;
+}
+
+
+
 // helper function to get the max index
 inline int MaxIndex(Tensor<cpu, 1, real_t> pred) {
   int maxidx = 0;
@@ -59,12 +93,10 @@ public:
 	void trainvalidate_batchwise( const std::string & train_path , const std::string & test_path, bool augment_data, unsigned junkSize) {
 
 
-
-
 		  // load weights
-		  //for(int i = 0; i < ndev_; i++){
+		  for(int i = 0; i < ndev_; i++){
 			  //nets_[i]->load_weights(net_, 0);
-		  //}
+		  }
 
 		  int num_out = nets_[0]->get_outputdim();
 		  int step = batch_size_ / ndev_;
@@ -75,6 +107,8 @@ public:
 		  //Epochs loop
 		  for (int i = 0; i <= epochs_; ++ i){
 
+
+			  double wall0 = utility::get_wall_time();
 
 			  trainDataLoader.start_epoch(i);
 			  int b = 1;
@@ -117,6 +151,7 @@ public:
 			  trainDataLoader.reset();
 
 
+
 			  //Cout logging
 			  dataload::dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
 			  testDataLoader.start_epoch(1);
@@ -134,16 +169,20 @@ public:
 			  real_t acc = (1.0 - (real_t)nerr/testDataLoader.fullSize())*100;
 			  real_t loss = (-(real_t)logloss/testDataLoader.fullSize());
 			  printf("%.2f%% ", acc);
-			  printf("logloss %.4f\n", loss);
+			  printf("logloss %.4f ", loss);
 			  utility::write_val_to_file< float >(logfile_.c_str(), acc, false);
 			  utility::write_val_to_file< float >(logfile_.c_str(), loss, true);
 
 			  testDataLoader.reset();
 
-			  if(((i == epochs_) or (i % 50 == 0) ) and (i != 0)){
+			  if(((i == epochs_) or (i % 25 == 0) ) and (i != 0)){
 				  nets_[0]->Sync();
 				  nets_[0]->save_weights(net_, i);
 			  }
+
+
+			  double wall1 = utility::get_wall_time();
+			  std::cout << "( " << wall1 - wall0 << "s )" << std::endl;
 
 		  }
 

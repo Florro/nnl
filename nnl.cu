@@ -26,15 +26,7 @@
 #include "mshadow/tensor.h"
 #include "neuralnet/configurator.h"
 
-// helper function to messure wall time
-double get_wall_time(){
-    struct timeval time;
-    if (gettimeofday(&time,NULL)){
-        //  Handle error
-        return 0;
-    }
-    return (double)time.tv_sec + (double)time.tv_usec * .000001;
-}
+
 
 
 void read_data_mnist( TensorContainer<cpu, 4, real_t> &xtrain,  TensorContainer<cpu, 4, real_t> &xtest,
@@ -79,7 +71,7 @@ inline int Run(int argc, char *argv[]) {
   }else if (data == 1){
 	  net = "/home/niklas/CXX/nnl/testNets/plankton/net2/";
   }else if (data == 2){
-	  net = "/home/niklas/CXX/nnl/testNets/retina/net128_merge_2class/";
+	  net = "/home/niklas/CXX/nnl/testNets/plankton_full/net96/";
   }
 
   //Read config file
@@ -89,19 +81,19 @@ inline int Run(int argc, char *argv[]) {
   nntrainer<xpu>* mynntrainer = new nntrainer<xpu>(argc, argv, net, cfg);
 
   //train routine
-  double wall0 = get_wall_time();
+  double wall0 = utility::get_wall_time();
   if(!strcmp(argv[argc-1], "train")){
 	  //mynntrainer->save_weights();
-	  mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 125000 );
+	  mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 30000 );
   }else if (!strcmp(argv[argc-1], "predict")){
-	  mynntrainer->predict(100000, 150);
+	  mynntrainer->predict(30000, 150);
   }
   else{
 	  utility::Error("Unknown control parameter: %s, use train/predict", argv[argc-1]);
   }
 
 
-  double wall1 = get_wall_time();
+  double wall1 = utility::get_wall_time();
 
   std::cout << "\nWall Time = " << wall1 - wall0 << std::endl;
 
