@@ -73,7 +73,7 @@ public:
 	void start_epoch(unsigned epoch);
 
 private:
-	void Load_Images_Labels_(const unsigned &, int tid);
+	void Load_Images_Labels_(const unsigned & , const unsigned &, int tid);
 	void get_image_dims_();
 	void load_data_list_();
 	std::vector< real_t > schedule_current_weights(unsigned epoch);
@@ -215,14 +215,15 @@ void dataBatchLoader_mthread::readBatch(void) {
 		{
 			 nthread = std::max(omp_get_num_procs() / 2 - 1, 1);
 		}
+		int tidsize = std::floor(static_cast<float>(size) / static_cast<float>(nthread));
 		#pragma omp parallel num_threads(nthread)
 		{
 			int tid = omp_get_thread_num();
-			this->Load_Images_Labels_(std::floor(static_cast<float>(size) / static_cast<float>(nthread)), tid);
+			this->Load_Images_Labels_(tidsize, tidsize, tid);
 		}
-		int rest = size % nthread;
+		int rest = size - nthread * tidsize;
 		if(rest != 0){
-			this->Load_Images_Labels_(rest, nthread);
+			this->Load_Images_Labels_(rest, tidsize, nthread);
 		}
 
 		// increment counters
@@ -236,15 +237,15 @@ void dataBatchLoader_mthread::readBatch(void) {
 	}
 }
 
-void dataBatchLoader_mthread::Load_Images_Labels_(const unsigned & size, int tid){
+void dataBatchLoader_mthread::Load_Images_Labels_(const unsigned & size, const unsigned & tidsize, int tid){
 
 	for (unsigned i = 0; i < size; i++){
 
 		//load label
-		mLabels[tid * size + i] = (mImglst[mReadPos_ + tid * size + i].first);
+		mLabels[tid * tidsize + i] = (mImglst[mReadPos_ + tid * tidsize + i].first);
 
 		//load image
-		cv::Mat img = cv::imread( mImglst[mReadPos_ + tid * size + i].second, cv::IMREAD_COLOR );
+		cv::Mat img = cv::imread( mImglst[mReadPos_ + tid * tidsize + i].second, cv::IMREAD_COLOR );
 
 		if(false){
 			cv::namedWindow( "pic" );
@@ -267,7 +268,7 @@ void dataBatchLoader_mthread::Load_Images_Labels_(const unsigned & size, int tid
 			cv::Vec3b bgr = img.at< cv::Vec3b >(y, x);
 			// store in RGB order
 			for(unsigned k = 0; k < mNumChannels_; k++){
-				mImageData[tid * size + i][k][y][x] = ((float)bgr[k] - avgPixelIntensity[k]) / 256.0f; //toDo HARDCODE
+				mImageData[tid * tidsize + i][k][y][x] = ((float)bgr[k] - avgPixelIntensity[k]) / 256.0f; //toDo HARDCODE
 			}
 		  }
 		}

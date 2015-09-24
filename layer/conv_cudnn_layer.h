@@ -232,7 +232,7 @@ public:
 		CUDNN_SAFE_CALL(cudnnConvolutionBackwardFilter_v3(handle_, &alpha,
 												  in_desc_, inputLayer_->getpAct()->data.dptr_,
 												  out_desc_, activations_.data.dptr_,
-												  conv_desc_, CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1, temp_.dptr_, workspace_size_, &beta,
+												  conv_desc_, back_algo_w_, temp_.dptr_, workspace_size_, &beta,
 												  filter_desc_, gkernel_.dptr_));
 		//CUDNN_SAFE_CALL(cudnnConvolutionBackwardFilter( handle_, &alpha, in_desc_, inputLayer_->getpAct()->data.dptr_,
 		//												out_desc_, activations_.data.dptr_, conv_desc_,&beta,filter_desc_, gkernel_.dptr_));
@@ -242,7 +242,7 @@ public:
 			CUDNN_SAFE_CALL(cudnnConvolutionBackwardData_v3(handle_, &alpha,
 													filter_desc_, kernel_.dptr_,
 													out_desc_, activations_.data.dptr_,
-													conv_desc_, CUDNN_CONVOLUTION_BWD_DATA_ALGO_1, temp_.dptr_, workspace_size_, &beta,
+													conv_desc_, back_algo_, temp_.dptr_, workspace_size_, &beta,
 													in_desc_, inputLayer_->getpAct()->data.dptr_));
 		}
 		//CUDNN_SAFE_CALL(cudnnConvolutionBackwardData( handle_, &alpha, filter_desc_, kernel_.dptr_,
