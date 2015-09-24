@@ -5,8 +5,8 @@
  *      Author: florian
  */
 
-#ifndef DATABATCHLOADER_H_
-#define DATABATCHLOADER_H_
+#ifndef DATABATCHLOADER_MTHREAD_H_
+#define DATABATCHLOADER_MTHREAD_H_
 
 #include "mshadow/tensor.h"
 #include "mshadow-ps/mshadow_ps.h"
@@ -18,22 +18,23 @@
 #include <ctime>
 #include "../neuralnet/configurator.h"
 #include "../utility/RNGen.h"
+#include <omp.h>
 
 namespace dataload{
 
-struct dataBatchLoader{
+struct dataBatchLoader_mthread{
 
 public:
 
 	/*
 	 * Create a 'dataBatchLoader' to read from 'lst_path' in 'batchSize' chunks
 	 */
-	dataBatchLoader(const unsigned int & batchSize, const bool & is_train, const bool & augmentData, std::vector < std::pair <std::string, std::string > > & cfg);
+	dataBatchLoader_mthread(const unsigned int & batchSize, const bool & is_train, const bool & augmentData, std::vector < std::pair <std::string, std::string > > & cfg);
 
 	/*
 	 * Destructor
 	 */
-	virtual ~dataBatchLoader(void);
+	virtual ~dataBatchLoader_mthread(void);
 
 	/*
 	 * Reads one databatch of size 'mJunkSize_'
@@ -72,7 +73,7 @@ public:
 	void start_epoch(unsigned epoch);
 
 private:
-	void Load_Images_Labels_(const unsigned &);
+	void Load_Images_Labels_(const unsigned &, int tid);
 	void get_image_dims_();
 	void load_data_list_();
 	std::vector< real_t > schedule_current_weights(unsigned epoch);
@@ -108,12 +109,12 @@ private:
 	RNGen* myRand_;
 };
 
-dataBatchLoader:: ~dataBatchLoader(void){
+dataBatchLoader_mthread:: ~dataBatchLoader_mthread(void){
 	delete(myIA_);
 	delete(myRand_);
 }
 
-dataBatchLoader::dataBatchLoader(const unsigned int & junkSize, const bool & is_train, const bool & augmentData, std::vector < std::pair <std::string, std::string > > &cfg)
+dataBatchLoader_mthread::dataBatchLoader_mthread(const unsigned int & junkSize, const bool & is_train, const bool & augmentData, std::vector < std::pair <std::string, std::string > > &cfg)
 : mPicSize_(0), maxJunkSize_(junkSize), mJunkSize_(0), mNumBatches(0), mNumChannels_(0),
   mReadCounter_(0), mReadPos_(0), is_train_(is_train), mSize_(0), mPath_(""), mNumBatches__(false),
   mAugmentData_(augmentData), myIA_(NULL),
@@ -142,7 +143,7 @@ dataBatchLoader::dataBatchLoader(const unsigned int & junkSize, const bool & is_
 	myRand_ = new RNGen();
 }
 
-std::vector< real_t > dataBatchLoader::schedule_current_weights(unsigned epoch){
+std::vector< real_t > dataBatchLoader_mthread::schedule_current_weights(unsigned epoch){
 	std::vector< real_t > weights(augparameter_.weights_start.size());
 	for(unsigned i = 0; i < weights.size(); i++){
 		weights[i] = epoch * ((float)augparameter_.weights_end[i] - (float)augparameter_.weights_start[i]) / augparameter_.classweights_saturation_epoch + augparameter_.weights_start[i] ;
@@ -153,7 +154,7 @@ std::vector< real_t > dataBatchLoader::schedule_current_weights(unsigned epoch){
 	return weights;
 }
 
-void dataBatchLoader::start_epoch(unsigned epoch){
+void dataBatchLoader_mthread::start_epoch(unsigned epoch){
 
 	epoch_count_ = epoch;
 
@@ -190,7 +191,7 @@ void dataBatchLoader::start_epoch(unsigned epoch){
 }
 
 
-void dataBatchLoader::readBatch(void) {
+void dataBatchLoader_mthread::readBatch(void) {
 
 	// Only read next batch if neccessary
 	if ( mReadPos_ < mSize_ ) {
@@ -206,10 +207,23 @@ void dataBatchLoader::readBatch(void) {
 		if ( mLabels.size() != 0) {
 			mLabels.clear();
 		}
-
+		mLabels.resize(size);
 
 		// Load batch-images into mImageData and batch-labels into mLabels
-		this->Load_Images_Labels_(size);
+    	int nthread;
+		#pragma omp parallel
+		{
+			 nthread = std::max(omp_get_num_procs() / 2 - 1, 1);
+		}
+		#pragma omp parallel num_threads(nthread)
+		{
+			int tid = omp_get_thread_num();
+			this->Load_Images_Labels_(std::floor(static_cast<float>(size) / static_cast<float>(nthread)), tid);
+		}
+		int rest = size % nthread;
+		if(rest != 0){
+			this->Load_Images_Labels_(rest, nthread);
+		}
 
 		// increment counters
 		mReadCounter_++;
@@ -222,15 +236,15 @@ void dataBatchLoader::readBatch(void) {
 	}
 }
 
-void dataBatchLoader::Load_Images_Labels_(const unsigned & size){
+void dataBatchLoader_mthread::Load_Images_Labels_(const unsigned & size, int tid){
 
 	for (unsigned i = 0; i < size; i++){
 
 		//load label
-		mLabels.push_back(mImglst[mReadPos_ + i].first);
+		mLabels[tid * size + i] = (mImglst[mReadPos_ + tid * size + i].first);
 
 		//load image
-		cv::Mat img = cv::imread( mImglst[mReadPos_ + i].second, cv::IMREAD_COLOR );
+		cv::Mat img = cv::imread( mImglst[mReadPos_ + tid * size + i].second, cv::IMREAD_COLOR );
 
 		if(false){
 			cv::namedWindow( "pic" );
@@ -244,6 +258,7 @@ void dataBatchLoader::Load_Images_Labels_(const unsigned & size){
 			myIA_->distort(img);
 		}
 
+
 		//substract image mean
 		cv::Scalar avgPixelIntensity = myIA_->get_mean(img);
 
@@ -252,7 +267,7 @@ void dataBatchLoader::Load_Images_Labels_(const unsigned & size){
 			cv::Vec3b bgr = img.at< cv::Vec3b >(y, x);
 			// store in RGB order
 			for(unsigned k = 0; k < mNumChannels_; k++){
-				mImageData[i][k][y][x] = ((float)bgr[k] - avgPixelIntensity[k]) / 256.0f; //toDo HARDCODE
+				mImageData[tid * size + i][k][y][x] = ((float)bgr[k] - avgPixelIntensity[k]) / 256.0f; //toDo HARDCODE
 			}
 		  }
 		}
@@ -262,7 +277,7 @@ void dataBatchLoader::Load_Images_Labels_(const unsigned & size){
 }
 
 
-void dataBatchLoader::load_data_list_(){
+void dataBatchLoader_mthread::load_data_list_(){
       std::ifstream dataSet (mPath_.c_str(), std::ios::in);
       if(!dataSet){    	  utility::Error("Data list file not found: %s", (char*)mPath_.c_str());      }
 
@@ -286,7 +301,7 @@ void dataBatchLoader::load_data_list_(){
       dataSet.close();
 }
 
-void dataBatchLoader::get_image_dims_(){
+void dataBatchLoader_mthread::get_image_dims_(){
       std::ifstream dataSet (mPath_.c_str(), std::ios::in);
       if(!dataSet){    	  utility::Error("Data list file not found: %s", (char*)mPath_.c_str());      }
 
@@ -322,30 +337,30 @@ void dataBatchLoader::get_image_dims_(){
 
 }
 
-void dataBatchLoader::reset(void) {
+void dataBatchLoader_mthread::reset(void) {
 	mReadCounter_ = 0;
 	mReadPos_ = 0;
 	mNumBatches__ = false;
 	mImglst.clear();
 }
 
-TensorContainer<cpu, 4, real_t> & dataBatchLoader::Data(void) {
+TensorContainer<cpu, 4, real_t> & dataBatchLoader_mthread::Data(void) {
 	return mImageData;
 }
 
-std::vector<int> & dataBatchLoader::Labels(void) {
+std::vector<int> & dataBatchLoader_mthread::Labels(void) {
 	return mLabels;
 }
 
-const bool & dataBatchLoader::finished(void) const {
+const bool & dataBatchLoader_mthread::finished(void) const {
 	return mNumBatches__;
 }
 
-const unsigned int & dataBatchLoader::fullSize(void) const {
+const unsigned int & dataBatchLoader_mthread::fullSize(void) const {
 	return mSize_;
 }
 
-const unsigned int & dataBatchLoader::numBatches(void) const {
+const unsigned int & dataBatchLoader_mthread::numBatches(void) const {
 	return mNumBatches;
 }
 

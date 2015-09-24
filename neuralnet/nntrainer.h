@@ -11,39 +11,9 @@
 #include "mshadow/tensor.h"
 #include "mshadow-ps/mshadow_ps.h"
 #include "neural_net.h"
+#include "../utility/dataBatchLoader_mthread.h"
 #include "../utility/dataBatchLoader.h"
 
-#define PROFILE(call) do{ \
-		cudaEvent_t start, stop; \
-		cudaEventCreate( &start );\
-		cudaEventCreate( &stop );\
-		cudaEventRecord( start, 0 );\
-		call; \
-		cudaEventRecord( stop, 0 );\
-		cudaEventSynchronize( stop );	\
-		float elapsedTime;\
-		cudaEventElapsedTime( &elapsedTime, start, stop );\
-		std::cout << "( " << elapsedTime / (float) 1000 << "s ) ";\
-		cudaEventDestroy( start );\
-		cudaEventDestroy( stop  );\
-		} while(0);
-
-void start_time_messure(cudaEvent_t &start, cudaEvent_t &stop){
-	  cudaEventCreate( &start );
-	  cudaEventCreate( &stop );
-	  cudaEventRecord( start, 0 );
-}
-
-float stop_time_messure(cudaEvent_t &start, cudaEvent_t &stop){
-	cudaEventRecord( stop, 0 );
-	cudaEventSynchronize( stop );
-	float elapsedTime;
-	cudaEventElapsedTime( &elapsedTime, start, stop );
-	cudaEventDestroy( start );
-	cudaEventDestroy( stop  );
-
-	return elapsedTime / (float)1000;
-}
 
 
 
@@ -117,7 +87,10 @@ public:
 			  while ( !trainDataLoader.finished() ) {
 
 				  // Load databatch from disk
+				  //double wall0 = utility::get_wall_time();
 				  trainDataLoader.readBatch();
+				  //double wall1 = utility::get_wall_time();
+				  //std::cout << "\n Reader Time = " << wall1 - wall0 << std::endl;
 
 					  // running parallel threads
 				  #pragma omp parallel num_threads(ndev_)

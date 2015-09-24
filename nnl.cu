@@ -68,7 +68,7 @@ inline int Run(int argc, char *argv[]) {
   double wall0 = utility::get_wall_time();
   if(!strcmp(argv[1], "train")){
 	  //mynntrainer->save_weights();
-	  mynntrainer->trainvalidate_batchwise( true, 100000 );
+	  mynntrainer->trainvalidate_batchwise( false, 9000 );
   }else if (!strcmp(argv[1], "predict")){
 	  mynntrainer->predict(100000, 75);
   }
