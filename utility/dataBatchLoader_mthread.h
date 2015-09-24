@@ -37,7 +37,7 @@ public:
 	virtual ~dataBatchLoader_mthread(void);
 
 	/*
-	 * Reads one databatch of size 'mJunkSize_'
+	 * Reads one databatch of size 'mchunkSize_'
 	 */
 	void readBatch(void);
 
@@ -83,8 +83,8 @@ private:
 
 	unsigned int mPicSize_;					// picture-side length
 	unsigned int mNumChannels_;
-	unsigned int mJunkSize_;				// chunk-size
-	unsigned int maxJunkSize_;
+	unsigned int mchunkSize_;				// chunk-size
+	unsigned int maxchunkSize_;
 	unsigned int mReadCounter_;				// counter for number of batches
 	unsigned int mReadPos_;					// current read position in the path-list
 	unsigned int epoch_count_;              // count epochs
@@ -114,8 +114,8 @@ dataBatchLoader_mthread:: ~dataBatchLoader_mthread(void){
 	delete(myRand_);
 }
 
-dataBatchLoader_mthread::dataBatchLoader_mthread(const unsigned int & junkSize, const bool & is_train, const bool & augmentData, std::vector < std::pair <std::string, std::string > > &cfg)
-: mPicSize_(0), maxJunkSize_(junkSize), mJunkSize_(0), mNumBatches(0), mNumChannels_(0),
+dataBatchLoader_mthread::dataBatchLoader_mthread(const unsigned int & chunkSize, const bool & is_train, const bool & augmentData, std::vector < std::pair <std::string, std::string > > &cfg)
+: mPicSize_(0), maxchunkSize_(chunkSize), mchunkSize_(0), mNumBatches(0), mNumChannels_(0),
   mReadCounter_(0), mReadPos_(0), is_train_(is_train), mSize_(0), mPath_(""), mNumBatches__(false),
   mAugmentData_(augmentData), myIA_(NULL),
   cfg_(cfg),
@@ -178,11 +178,11 @@ void dataBatchLoader_mthread::start_epoch(unsigned epoch){
 
 	//Set sizes
 	mSize_ = mImglst.size();
-	mJunkSize_ = std::min(maxJunkSize_, mSize_);
+	mchunkSize_ = std::min(maxchunkSize_, mSize_);
 	// Calculate number of data-batches
-	mNumBatches = ceil(static_cast<float>(mSize_)/ static_cast<float>(mJunkSize_));
+	mNumBatches = ceil(static_cast<float>(mSize_)/ static_cast<float>(mchunkSize_));
 
-	if(epoch_count_ == 0) std::cout << "DataSize: " << mSize_ << " JunkSize: " << mJunkSize_ << std::endl;
+	if(epoch_count_ == 0) std::cout << "DataSize: " << mSize_ << " chunkSize: " << mchunkSize_ << std::endl;
 
 	// Random is_train pathlist
 	if (is_train_) std::random_shuffle ( mImglst.begin(), mImglst.end() );
@@ -199,7 +199,7 @@ void dataBatchLoader_mthread::readBatch(void) {
 		// Deterimine size of next batch
 		unsigned int size = mSize_ - mReadPos_;	// Read data so far
 
-		size =	std::min(mJunkSize_, size);
+		size =	std::min(mchunkSize_, size);
 
 		// Resize data-container
 		mImageData.Resize(Shape4(size, mNumChannels_, mPicSize_, mPicSize_));

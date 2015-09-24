@@ -60,7 +60,7 @@ public:
 	}
 
 
-	void trainvalidate_batchwise( bool augment_data, unsigned junkSize) {
+	void trainvalidate_batchwise( bool augment_data, unsigned chunkSize) {
 
 
 		  // load weights
@@ -71,8 +71,8 @@ public:
 		  int num_out = nets_[0]->get_outputdim();
 		  int step = batch_size_ / ndev_;
 
-		  // Create Batch-loaders for Data with max Junksize and shuffle
-		  dataload::dataBatchLoader_mthread trainDataLoader(junkSize, true, augment_data, cfg_);
+		  // Create Batch-loaders for Data with max chunkSize and shuffle
+		  dataload::dataBatchLoader_mthread trainDataLoader(chunkSize, true, augment_data, cfg_);
 
 		  //Epochs loop
 		  for (int i = 0; i <= epochs_; ++ i){
@@ -126,7 +126,7 @@ public:
 
 
 			  //Cout logging
-			  dataload::dataBatchLoader_mthread testDataLoader(junkSize, false, false, cfg_);
+			  dataload::dataBatchLoader_mthread testDataLoader(chunkSize, false, false, cfg_);
 			  testDataLoader.start_epoch(1);
 
 			  std::cout << "Test: ";
@@ -162,15 +162,15 @@ public:
 		}
 
 
-	void predict( unsigned junkSize, unsigned epoch) {
+	void predict( unsigned chunkSize, unsigned epoch) {
 
 		  // mini-batch per device
 		  for(int i = 0; i < ndev_; i++){
 			  nets_[i]->load_weights(net_, epoch);
 		  }
 
-		  // Create Batch-loaders for Data with max Junksize and shuffle
-		  dataload::dataBatchLoader_mthread testDataLoader(junkSize, false, false, cfg_);
+		  // Create Batch-loaders for Data with max chunkSize and shuffle
+		  dataload::dataBatchLoader_mthread testDataLoader(chunkSize, false, false, cfg_);
 		  testDataLoader.start_epoch(1);
 
 		  //Cout logging
