@@ -12,8 +12,6 @@
 #include "mshadow-ps/mshadow_ps.h"
 #include "neural_net.h"
 #include "../utility/dataBatchLoader_mthread.h"
-#include "../utility/dataBatchLoader.h"
-
 
 
 
@@ -74,7 +72,7 @@ public:
 		  int step = batch_size_ / ndev_;
 
 		  // Create Batch-loaders for Data with max Junksize and shuffle
-		  dataload::dataBatchLoader trainDataLoader(junkSize, true, augment_data, cfg_);
+		  dataload::dataBatchLoader_mthread trainDataLoader(junkSize, true, augment_data, cfg_);
 
 		  //Epochs loop
 		  for (int i = 0; i <= epochs_; ++ i){
@@ -128,7 +126,7 @@ public:
 
 
 			  //Cout logging
-			  dataload::dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
+			  dataload::dataBatchLoader_mthread testDataLoader(junkSize, false, false, cfg_);
 			  testDataLoader.start_epoch(1);
 
 			  std::cout << "Test: ";
@@ -172,7 +170,7 @@ public:
 		  }
 
 		  // Create Batch-loaders for Data with max Junksize and shuffle
-		  dataload::dataBatchLoader testDataLoader(junkSize, false, false, cfg_);
+		  dataload::dataBatchLoader_mthread testDataLoader(junkSize, false, false, cfg_);
 		  testDataLoader.start_epoch(1);
 
 		  //Cout logging
