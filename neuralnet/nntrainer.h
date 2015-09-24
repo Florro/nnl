@@ -60,15 +60,17 @@ template<typename xpu>
 class nntrainer{
 public:
 
-	nntrainer(int argc, char *argv[],  std::string net, std::vector < std::pair <std::string, std::string > > cfg):
+	nntrainer(std::string net, std::vector < std::pair <std::string, std::string > > cfg):
 		 	  net_(net), cfg_(cfg) {
 
 		  utility::createDir(net, "log");
 		  logfile_ = net + "log/loss.log";
 
-		  ndev_ = argc - 3;
-		  for (int i = 2; i < (argc - 1); ++i) {
-			 devs_.push_back(atoi(argv[i]));
+		  std::vector<int> devices = configurator::getdevices(cfg);
+
+		  ndev_ = devices.size();
+		  for (int i = 0; i < devices.size(); ++i) {
+			 devs_.push_back(devices[i]);
 		  }
 
 		  ps_ = mshadow::ps::CreateSharedModel<xpu, real_t>("local");
@@ -90,12 +92,12 @@ public:
 	}
 
 
-	void trainvalidate_batchwise( const std::string & train_path , const std::string & test_path, bool augment_data, unsigned junkSize) {
+	void trainvalidate_batchwise( bool augment_data, unsigned junkSize) {
 
 
 		  // load weights
 		  for(int i = 0; i < ndev_; i++){
-			  //nets_[i]->load_weights(net_, 0);
+			  //nets_[i]->load_weights(net_, 25);
 		  }
 
 		  int num_out = nets_[0]->get_outputdim();

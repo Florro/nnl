@@ -57,36 +57,20 @@ inline int Run(int argc, char *argv[]) {
   std::string train_path;
   std::string test_path;
 
-  //choose data:
-  int data = 2; //0 MNIST, 1 Plankton, 2 retina
-
-  std::vector< std::string > imglst_train;
-
-  //generate nn trainer
-  std::string net;
-
-  if(data == 0){
-	  //net = "/home/niklas/CXX/nnl/testNets/mnist/net1";
-	  //read_data_mnist(xtrain, xtest, ytrain, ytest);
-  }else if (data == 1){
-	  net = "/home/niklas/CXX/nnl/testNets/plankton/net2/";
-  }else if (data == 2){
-	  net = "/home/niklas/CXX/nnl/testNets/plankton_full/net96/";
-  }
-
   //Read config file
+  std::string net(argv[2]);
   std::vector < std::pair <std::string, std::string > > cfg = configurator::readcfg(net + "/config.conf");
 
   //Create nn trainer
-  nntrainer<xpu>* mynntrainer = new nntrainer<xpu>(argc, argv, net, cfg);
+  nntrainer<xpu>* mynntrainer = new nntrainer<xpu>(net, cfg);
 
   //train routine
   double wall0 = utility::get_wall_time();
-  if(!strcmp(argv[argc-1], "train")){
+  if(!strcmp(argv[1], "train")){
 	  //mynntrainer->save_weights();
-	  mynntrainer->trainvalidate_batchwise( train_path , test_path, true, 30000 );
-  }else if (!strcmp(argv[argc-1], "predict")){
-	  mynntrainer->predict(30000, 150);
+	  mynntrainer->trainvalidate_batchwise( true, 100000 );
+  }else if (!strcmp(argv[1], "predict")){
+	  mynntrainer->predict(100000, 75);
   }
   else{
 	  utility::Error("Unknown control parameter: %s, use train/predict", argv[argc-1]);

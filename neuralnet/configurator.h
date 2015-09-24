@@ -566,6 +566,27 @@ void setSGDGlobalParams(std::vector < std::pair <std::string, std::string > > &c
 
 }
 
+void setGPUGlobalParams(std::vector < std::pair <std::string, std::string > > &cfg, int &i, updater::UpdaterParam* hyperparam){
+
+	const char *name = "empty";
+	const char *val = "empty";
+
+	i++;
+	while(getpair(name, val, cfg[i])){
+			if(!strcmp(name, "lr_schedule")){
+				hyperparam->lr_schedule = atoi(val);
+				utility::Check(hyperparam->lr_schedule == 1 || hyperparam->lr_schedule == 0, "Learning schedule has to be 1 or 0: %i", val);
+			}
+			else{
+				utility::Error("Unknown Global parameter: %s", name);
+			}
+			i++;
+		}
+	i--;
+
+}
+
+
 
 template<typename xpu>
 void readNetConfig(std::vector < std::pair <std::string, std::string > > &cfg, std::vector< ILayer<xpu>* > &architecture, Loss_layer<xpu>*& losslayer, updater::UpdaterParam* hyperparam,  mshadow::Stream<xpu> *stream, Random<xpu, real_t> &rnd){
@@ -633,6 +654,14 @@ void readNetConfig(std::vector < std::pair <std::string, std::string > > &cfg, s
 					utility::Error("Unknown Minimizer: %s", val);
 				}
 			}
+			else if(!strcmp(name, "Devices")){
+				if(!strcmp(val, "GPU")){
+					setSGDGlobalParams(cfg, i, hyperparam);
+				}
+				else{
+					utility::Error("Unknown Minimizer: %s", val);
+				}
+			}
 
 
 		}
@@ -654,6 +683,7 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 
 	const char *name = "empty";
 	const char *val = "empty";
+	std::vector<int> devices;
 
 	augparameter.mirror = false;
 	augparameter.scaling = 0.0;
@@ -731,6 +761,20 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 				augparameter.classweights_saturation_epoch = atoi(val);
 				utility::Check(augparameter.classweights_saturation_epoch > 0, "classweights_saturation_epoch must be positive %s", val);
 			}
+			else if(!strcmp(name, "devices")){
+				std::string str(val);
+				std::string delimiter = ",";
+
+				size_t pos = 0;
+				std::string token;
+				while ((pos = str.find(delimiter)) != std::string::npos) {
+					token = str.substr(0, pos);
+					devices.push_back(atoi(token.c_str()));
+					str.erase(0, pos + delimiter.length());
+				}
+				devices.push_back(atoi(str.c_str()));
+			}
+
 
 			else{
 				utility::Error("Unknown Dataconfig parameter: %s", name);
@@ -820,6 +864,32 @@ int getepochs(std::vector< std::pair < std::string, std::string > > cfg){
 	return epochs;
 }
 
+
+//Get batchsize from config
+std::vector<int> getdevices(std::vector< std::pair < std::string, std::string > > cfg){
+	std::vector<int> devices;
+
+	for(unsigned i = 0; i < cfg.size(); i++){
+			const char *name = cfg[i].first.c_str();
+			const char *val = cfg[i].second.c_str();
+
+			if(!strcmp(name, "devices")){
+				std::string str(val);
+				std::string delimiter = ",";
+
+				size_t pos = 0;
+				std::string token;
+				while ((pos = str.find(delimiter)) != std::string::npos) {
+					token = str.substr(0, pos);
+					devices.push_back(atoi(token.c_str()));
+					str.erase(0, pos + delimiter.length());
+				}
+				devices.push_back(atoi(str.c_str()));
+			}
+	}
+
+	return devices;
+}
 
 
 }
