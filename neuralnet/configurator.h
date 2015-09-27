@@ -29,7 +29,7 @@
 
 #include "mshadow/tensor.h"
 #include "../utility/mshadow_op.h"
-#include "../utility/image_augmenter.h"
+#include "../utility/image_augmenter2.h"
 
 namespace configurator{
 
@@ -481,7 +481,7 @@ void setPoolingLayer(std::vector < std::pair <std::string, std::string > > &cfg,
 		}
 		else if(!strcmp(name, "mode")){
 			if(!strcmp(val, "max")){
-				architecture.push_back(new pool_layer<xpu, red::maximum>(architecture.back(), window_sl, stride));
+				architecture.push_back(new pool_cudnn_layer<xpu, MAX>(architecture.back(), window_sl, stride));
 				architecture.back()->InitLayer(stream,rnd);
 			}else if(!strcmp(val, "avg")){
 				architecture.push_back(new pool_cudnn_layer<xpu, AVG>(architecture.back(), window_sl, stride));
@@ -685,10 +685,12 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 	const char *val = "empty";
 	std::vector<int> devices;
 
+	augparameter.augment = false;
 	augparameter.mirror = false;
 	augparameter.scaling = 0.0;
 	augparameter.translation = 0;
 	augparameter.rotation = 0; //other axis commented out
+	augparameter.rotation_space = 0;
 	augparameter.sheering = 0.0f;
 	augparameter.background = "white";
 	augparameter.classweights_saturation_epoch = 1;
@@ -710,6 +712,16 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 					utility::Error("Wrong mirror flag: %s", val);
 				}
 			}
+			else if(!strcmp(name, "augment")){
+				if(!strcmp(val, "true")){
+					augparameter.augment = true;
+				}else if(!strcmp(val, "false")){
+					augparameter.augment  = false;
+				}
+				else{
+					utility::Error("Wrong augment flag: %s", val);
+				}
+			}
 			else if(!strcmp(name, "scaling")){
 				augparameter.scaling = atof(val);
 				utility::Check(augparameter.scaling >= 0, "scaling must be positive: %i", val);
@@ -721,6 +733,10 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 			else if(!strcmp(name, "rotation")){
 				augparameter.rotation = atoi(val);
 				utility::Check(augparameter.rotation >= 0, "rotation must be positive: %i", val);
+			}
+			else if(!strcmp(name, "rotation_space")){
+				augparameter.rotation_space = atoi(val);
+				utility::Check(augparameter.rotation_space >= 0 && augparameter.rotation_space < 90, "rotation_space must be positive and lower than 90: %i", val);
 			}
 			else if(!strcmp(name, "sheering")){
 				augparameter.sheering = atof(val);
@@ -833,7 +849,7 @@ std::vector < std::pair <std::string, std::string > > readcfg(string cfgfile){
 }
 
 //Get batchsize from config
-int getbatchsize(std::vector< std::pair < std::string, std::string > > cfg){
+int getbatchsize(std::vector< std::pair < std::string, std::string > > &cfg){
 	int batchsize = 0;
 
 	for(unsigned i = 0; i < cfg.size(); i++){
@@ -849,7 +865,7 @@ int getbatchsize(std::vector< std::pair < std::string, std::string > > cfg){
 }
 
 //Get batchsize from config
-int getepochs(std::vector< std::pair < std::string, std::string > > cfg){
+int getepochs(std::vector< std::pair < std::string, std::string > > &cfg){
 	int epochs = 0;
 
 	for(unsigned i = 0; i < cfg.size(); i++){
@@ -864,9 +880,35 @@ int getepochs(std::vector< std::pair < std::string, std::string > > cfg){
 	return epochs;
 }
 
+//Get batchsize from config
+bool getaugmentflag(std::vector< std::pair < std::string, std::string > > &cfg){
+	bool augment = false;
+
+	for(unsigned i = 0; i < cfg.size(); i++){
+		const char *name = cfg[i].first.c_str();
+		const char *val = cfg[i].second.c_str();
+
+		if(!strcmp(name, "augment")){
+			if(!strcmp(val, "true")){
+				augment = true;
+			}else if(!strcmp(val, "false")){
+				augment  = false;
+			}
+			else{
+				utility::Error("Wrong augment flag: %s", val);
+			}
+		}
+		else{
+			utility::Error("Augment flag not specified for getaugmentflag function!");
+		}
+	}
+
+	return augment;
+}
+
 
 //Get batchsize from config
-std::vector<int> getdevices(std::vector< std::pair < std::string, std::string > > cfg){
+std::vector<int> getdevices(std::vector< std::pair < std::string, std::string > > &cfg){
 	std::vector<int> devices;
 
 	for(unsigned i = 0; i < cfg.size(); i++){

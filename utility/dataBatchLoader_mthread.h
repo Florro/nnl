@@ -10,7 +10,7 @@
 
 #include "mshadow/tensor.h"
 #include "mshadow-ps/mshadow_ps.h"
-#include "../utility/image_augmenter.h"
+#include "../utility/image_augmenter2.h"
 #include "util.h"
 #include <algorithm>
 #include <cmath>
@@ -20,7 +20,71 @@
 #include "../utility/RNGen.h"
 #include <omp.h>
 
+
 namespace dataload{
+
+//Write params into file
+void save_tensor(TensorContainer<cpu, 3, real_t> host_weight, std::string outputfile){
+
+  std::ofstream outputstream ((char*)outputfile.c_str());
+
+  if (outputstream.is_open()){
+	  for(unsigned i = 0; i < host_weight.size(0); i++){
+		  for(unsigned j = 0; j < host_weight.size(1); j++){
+			  for(unsigned k = 0; k < host_weight.size(2); k++){
+				  outputstream << host_weight[i][j][k] << ",";
+			  }
+			  outputstream << std::endl;
+		  }
+		  outputstream << std::endl << std::endl;
+	  }
+  outputstream.close();
+  }
+  else{
+	  utility::Error("Saving image mean failed");
+  }
+
+}
+
+
+void load_tensor(TensorContainer<cpu, 3, real_t> &host_weight, std::string inputfile){
+
+	  std::ifstream dataSet ((char*)inputfile.c_str());
+	  if(!dataSet){
+		  utility::Error("Loading image mean failed");
+	  }
+
+	  unsigned globalcount = 0;
+	  unsigned count1 = 0;
+	  unsigned count2 = 0;
+	  unsigned count3 = 0;
+
+	  while (dataSet)
+	  {
+		  std::string s;
+		  if (!std::getline( dataSet, s )) break;
+		  std::istringstream ss( s );
+		  while (ss)
+		  {
+			std::string s;
+			if (!getline( ss, s, ',' )) break;
+
+			count3 = globalcount % host_weight.size(2);
+			count2 = (globalcount / host_weight.size(2)) % host_weight.size(1);
+			count1 = (globalcount / ( host_weight.size(2) * host_weight.size(1) )) % host_weight.size(0);
+
+			host_weight[count1][count2][count3] = atof(s.c_str());
+
+			globalcount++;
+		  }
+	  }
+	  dataSet.close();
+
+
+}
+
+
+
 
 struct dataBatchLoader_mthread{
 
@@ -96,7 +160,7 @@ private:
 	std::string mPath_;						// path to file
 	bool mNumBatches__;						// state of the reader
 	unsigned int mNumBatches;				// number of data-reads
-	cvimg::ImageAugmenter* myIA_;                  // data structure to augment data
+
 	cvimg::augparams augparameter_;
 
 	std::vector < std::pair < int, std::string > > mImglst; // Train and test labels and datapath lists
@@ -106,20 +170,32 @@ private:
 
 	std::vector<int> mLabels;					// labels of the current batch
 
-	RNGen* myRand_;
+	mshadow::TensorContainer<cpu, 3> meanimg_;
+
+	std::vector<RNGen*> myRands_;
+	std::vector<cvimg::ImageAugmenter* > myIAs_;               // data structure to augment data
+
+	int nthread_;
 };
 
 dataBatchLoader_mthread:: ~dataBatchLoader_mthread(void){
-	delete(myIA_);
-	delete(myRand_);
+
+
+	for(int i = 0; i < nthread_; i++){
+		delete(myIAs_[i]);
+		delete(myRands_[i]);
+	}
+
+
 }
 
 dataBatchLoader_mthread::dataBatchLoader_mthread(const unsigned int & chunkSize, const bool & is_train, const bool & augmentData, std::vector < std::pair <std::string, std::string > > &cfg)
 : mPicSize_(0), maxchunkSize_(chunkSize), mchunkSize_(0), mNumBatches(0), mNumChannels_(0),
   mReadCounter_(0), mReadPos_(0), is_train_(is_train), mSize_(0), mPath_(""), mNumBatches__(false),
-  mAugmentData_(augmentData), myIA_(NULL),
+  mAugmentData_(augmentData),
   cfg_(cfg),
-  epoch_count_(0)
+  epoch_count_(0),
+  nthread_(4)
 {
 
 	std::string trainpath;
@@ -133,14 +209,22 @@ dataBatchLoader_mthread::dataBatchLoader_mthread(const unsigned int & chunkSize,
     mPath_ = is_train ? trainpath : testpath;
 
     // Set random seed
-	std::srand ( 0 ); //unsigned ( std::time(0) )
+	std::srand ( unsigned ( std::time(0) ) );
 
 	// Set picture side length
 	this->get_image_dims_();
 
-	if(mAugmentData_ and is_train_)	myIA_ = new cvimg::ImageAugmenter(augparameter_);
+	#pragma omp parallel
+	{
+		nthread_ = std::max(omp_get_num_procs() / 2 - 1, 1);
+	}
+	for(int i = 0; i < nthread_; i++){
+		myIAs_.push_back(new cvimg::ImageAugmenter(augparameter_));
+	}
+	for(int i = 0; i < nthread_; i++){
+		myRands_.push_back(new RNGen());
+	}
 
-	myRand_ = new RNGen();
 }
 
 std::vector< real_t > dataBatchLoader_mthread::schedule_current_weights(unsigned epoch){
@@ -172,7 +256,7 @@ void dataBatchLoader_mthread::start_epoch(unsigned epoch){
 				mImglst.push_back(mImglst[i]);
 				prop = prop - 1.0f;
 			}
-			if(myRand_->bernoulli(prop)) mImglst.push_back(mImglst[i]);
+			if(myRands_[0]->bernoulli(prop)) mImglst.push_back(mImglst[i]);
 		}
 	}
 
@@ -187,6 +271,9 @@ void dataBatchLoader_mthread::start_epoch(unsigned epoch){
 	// Random is_train pathlist
 	if (is_train_) std::random_shuffle ( mImglst.begin(), mImglst.end() );
 
+	meanimg_.Resize(Shape3(3,80,80));//HARDFUCK
+	std::string name_meanimg_ = "/home/niklas/CXX/nnl/testNets/plankton/cxx_compare2/image_mean"; //HARDFUCK
+	load_tensor(meanimg_, name_meanimg_); //HARDFUCK
 
 }
 
@@ -210,20 +297,15 @@ void dataBatchLoader_mthread::readBatch(void) {
 		mLabels.resize(size);
 
 		// Load batch-images into mImageData and batch-labels into mLabels
-    	int nthread;
-		#pragma omp parallel
-		{
-			 nthread = std::max(omp_get_num_procs() / 2 - 1, 1);
-		}
-		int tidsize = std::floor(static_cast<float>(size) / static_cast<float>(nthread));
-		#pragma omp parallel num_threads(nthread)
+		int tidsize = std::floor(static_cast<float>(size) / static_cast<float>(nthread_));
+		#pragma omp parallel num_threads(nthread_)
 		{
 			int tid = omp_get_thread_num();
 			this->Load_Images_Labels_(tidsize, tidsize, tid);
 		}
-		int rest = size - nthread * tidsize;
+		int rest = size - nthread_ * tidsize;
 		if(rest != 0){
-			this->Load_Images_Labels_(rest, tidsize, nthread);
+			this->Load_Images_Labels_(rest, tidsize, nthread_);
 		}
 
 		// increment counters
@@ -236,6 +318,8 @@ void dataBatchLoader_mthread::readBatch(void) {
 		}
 	}
 }
+
+
 
 void dataBatchLoader_mthread::Load_Images_Labels_(const unsigned & size, const unsigned & tidsize, int tid){
 
@@ -254,26 +338,34 @@ void dataBatchLoader_mthread::Load_Images_Labels_(const unsigned & size, const u
 			cv::waitKey(0);
 		}
 
-		if(mAugmentData_){
-			//distort image with opencv
-			myIA_->distort(img);
-		}
 
+		//distort image with opencv
+		img = myIAs_[tid]->distort(img, myRands_[tid], mAugmentData_);
 
 		//substract image mean
-		cv::Scalar avgPixelIntensity = myIA_->get_mean(img);
+		//cv::Scalar avgPixelIntensity = myIA_->get_mean(img);
 
 		for(unsigned y = 0; y < mImageData.size(2); ++y) {
 		  for(unsigned x = 0; x < mImageData.size(3); ++x) {
 			cv::Vec3b bgr = img.at< cv::Vec3b >(y, x);
 			// store in RGB order
 			for(unsigned k = 0; k < mNumChannels_; k++){
-				mImageData[tid * tidsize + i][k][y][x] = ((float)bgr[k] - avgPixelIntensity[k]) / 256.0f; //toDo HARDCODE
+				//mImageData[tid * tidsize + i][k][y][x] = ((float)bgr[k] - avgPixelIntensity[k]); //toDo HARDCODE
+				mImageData[tid * tidsize + i][k][y][x] = (float)bgr[k];
 			}
 		  }
 		}
 
+		//meanimg_ += mImageData[i]; //HARDFUCK //just single thread!!!
+		mImageData[tid * tidsize + i] -= meanimg_; //HARDFUCK
+
 	}
+
+
+	//std::string name_meanimg_ = "/home/niklas/CXX/nnl/testNets/plankton/cxx_compare2/image_mean"; //HARDFUCK
+	//meanimg_ /= 20000.0f; //HARDFUCK
+	//save_tensor(meanimg_, name_meanimg_); //HARDFUCK
+
 
 }
 
@@ -322,6 +414,7 @@ void dataBatchLoader_mthread::get_image_dims_(){
       dataSet.close();
 
       cv::Mat img = cv::imread( (char*)tmp.second.c_str(), cv::IMREAD_COLOR );
+      cv::resize(img,img,cv::Size(80,80)); //HARDFUCK
       mPicSize_ = img.size().width;
 
       bool color = false;
@@ -335,7 +428,7 @@ void dataBatchLoader_mthread::get_image_dims_(){
       }
 
       mNumChannels_ = color ? 3 : 1;
-
+      mNumChannels_ = 3; // HARDFUCK
 }
 
 void dataBatchLoader_mthread::reset(void) {
@@ -364,6 +457,12 @@ const unsigned int & dataBatchLoader_mthread::fullSize(void) const {
 const unsigned int & dataBatchLoader_mthread::numBatches(void) const {
 	return mNumBatches;
 }
+
+
+
+
+
+
 
 }
 

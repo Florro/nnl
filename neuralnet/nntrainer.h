@@ -60,7 +60,7 @@ public:
 	}
 
 
-	void trainvalidate_batchwise( bool augment_data, unsigned chunkSize) {
+	void trainvalidate_batchwise( unsigned chunkSize) {
 
 
 		  // load weights
@@ -72,7 +72,7 @@ public:
 		  int step = batch_size_ / ndev_;
 
 		  // Create Batch-loaders for Data with max chunkSize and shuffle
-		  dataload::dataBatchLoader_mthread trainDataLoader(chunkSize, true, augment_data, cfg_);
+		  dataload::dataBatchLoader_mthread trainDataLoader(chunkSize, true, true, cfg_);
 
 		  //Epochs loop
 		  for (int i = 0; i <= epochs_; ++ i){
@@ -85,10 +85,7 @@ public:
 			  while ( !trainDataLoader.finished() ) {
 
 				  // Load databatch from disk
-				  //double wall0 = utility::get_wall_time();
 				  trainDataLoader.readBatch();
-				  //double wall1 = utility::get_wall_time();
-				  //std::cout << "\n Reader Time = " << wall1 - wall0 << std::endl;
 
 					  // running parallel threads
 				  #pragma omp parallel num_threads(ndev_)

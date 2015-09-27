@@ -98,11 +98,12 @@ public:
 		//init weights
 		if(weightInit_ == 0.0f){
 			//Xavier initalization
-			real_t a = sqrt(3.0f / (kernel_.size(2) + kernel_.size(1) + kernel_.size(3)));
+			//real_t a = sqrt(3.0f / (kernel_.size(2) + kernel_.size(1) + kernel_.size(3)));
+			real_t a = sqrt(3.0f / (kernel_.size(0) + kernel_.size(2) * kernel_.size(1) * kernel_.size(3)));
 			rnd.SampleUniform(&kernel_, -a, a);
 		}else{
 			//Gaussian
-			rnd.SampleGaussian(&kernel_, 0, weightInit_);
+			rnd.SampleGaussian(&kernel_, -weightInit_, weightInit_);
 		}
 
 	}
@@ -204,6 +205,10 @@ public:
 	    workspace_size_ = std::max(back_size, workspace_size_);
 	    temp_.Resize(mshadow::Shape1(workspace_size_ / sizeof(float) + 1), 0.0f);
 
+
+	    utility::Check(inputLayer_->getpAct()->data.CheckContiguous(), "Conv inputdata not contiguous");
+	    utility::Check(activations_.data.CheckContiguous(), "Conv data not contiguous");
+	    utility::Check(temp_.CheckContiguous(), "Conv temp not contiguous");
 
 	    CUDNN_SAFE_CALL(cudnnConvolutionForward(handle_, &alpha,
 	                                           in_desc_, inputLayer_->getpAct()->data.dptr_,

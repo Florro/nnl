@@ -52,12 +52,22 @@ public:
 
 	void onBatchSizeChanged( int batch_size ){
 		activations_.FreeSpace();
+		temp_.FreeSpace();
+		temp2_.FreeSpace();
+
 		activations_.data.shape_ = Shape4(batch_size,
 										  inputLayer_->getpAct()->data.size(1),
 										  std::min(inputLayer_->getpAct()->data.size(2) - psize_ + pstride_ - 1, inputLayer_->getpAct()->data.size(2) - 1) / pstride_ + 1,
 										  std::min(inputLayer_->getpAct()->data.size(3) - psize_ + pstride_ - 1, inputLayer_->getpAct()->data.size(3) - 1) / pstride_ + 1);
 
+
+		temp_.data.shape_ = activations_.data.shape_;
+		temp2_.data.shape_ = inputLayer_->getpAct()->data.shape_;
+
+
 		activations_.AllocSpace();
+		temp_.AllocSpace();
+		temp2_.AllocSpace();
 
 	}
 
@@ -66,14 +76,20 @@ public:
 		this->stream_ = stream;
 
 		activations_.set_stream(stream);
-
 		activations_.data.shape_ = Shape4(inputLayer_->getpAct()->data.size(0),
 										  inputLayer_->getpAct()->data.size(1),
 										  std::min(inputLayer_->getpAct()->data.size(2) - psize_ + pstride_ - 1, inputLayer_->getpAct()->data.size(2) - 1) / pstride_ + 1,
 										  std::min(inputLayer_->getpAct()->data.size(3) - psize_ + pstride_ - 1, inputLayer_->getpAct()->data.size(3) - 1) / pstride_ + 1);
 
-		pooltmp_.set_stream(stream_);
-		pooltmp_2.set_stream(stream_);
+		//pooltmp_.set_stream(stream_);
+		//pooltmp_2.set_stream(stream_);
+
+		temp_.set_stream(stream_);
+		temp_.data.shape_ = activations_.data.shape_;
+
+		temp2_.set_stream(stream_);
+		temp2_.data.shape_ = inputLayer_->getpAct()->data.shape_;
+
 
 	}
 
@@ -82,10 +98,6 @@ public:
 	}
 
 	void feedforward(bool is_train){
-		if(pooltmp_.shape_ != activations_.data.shape_){
-			pooltmp_.Resize(activations_.data.shape_); //workaround for connectstate
-		}
-
 
 		CUDNN_SAFE_CALL(cudnnSetStream(handle_, activations_.data.stream_->stream_));
 		mshadow::Tensor<gpu, 4, float> &in =  inputLayer_->getpAct()->data;
@@ -101,57 +113,43 @@ public:
 		float alpha = 1.0f;
 	    float beta = 0.0f;
 
+	    utility::Check(inputLayer_->getpAct()->data.CheckContiguous(), "pooling input data not contiguous");
+	    utility::Check(activations_.data.CheckContiguous(), "pooling data not contiguous");
+	    utility::Check(temp_.data.CheckContiguous(), "pooling temp1 data not contiguous");
 
 	    CUDNN_SAFE_CALL(cudnnPoolingForward( handle_, pooling_desc_, &alpha,
 									 	 	 in_desc_, inputLayer_->getpAct()->data.dptr_, &beta,
-									 	 	 out_desc_, activations_.data.dptr_));
+									 	 	 out_desc_, temp_.data.dptr_));
 
 		// copy into temps
-		Copy(pooltmp_, activations_.data, stream_);
+		Copy(activations_.data, temp_.data, stream_);
 
 
-
-		/*
-		TensorContainer<cpu, 4, real_t> data;
-		data.Resize(activations_.data.shape_);
-		Copy(data, activations_.data, activations_.data.stream_);
-		for(int i = 0; i < data.size(2); i++){
-			for(int j = 0; j < data.size(3); j++){
-				std::cout <<  data[0][0][i][j] << " ";
-
-			}
-			std::cout << std::endl;
-		}
-		std::cout << "tens1" << std::endl;
-		int a;
-		std::cin >> a;
-		std::cin.clear();
-		std::cin.ignore(INT_MAX,'\n');
-	 	 */
 	 }
 
 	void backpropagate(void){
 
 		float alpha = 1.0f;
 		float beta = 0.0f;
-		if(pooltmp_2.shape_ != inputLayer_->getpAct()->data.shape_){
-			pooltmp_2.Resize(inputLayer_->getpAct()->data.shape_); //workaround for connectstate
-		}
+
+		utility::Check(temp2_.data.CheckContiguous(), "pooling temp2 data not contiguous");
 
 		if(backPropError){
 		CUDNN_SAFE_CALL(cudnnPoolingBackward(	handle_, pooling_desc_, &alpha,
-												out_desc_, pooltmp_.dptr_,
+												out_desc_, temp_.data.dptr_,
 												out_desc_, activations_.data.dptr_,
 												in_desc_, inputLayer_->getpAct()->data.dptr_, &beta,
-												in_desc_, pooltmp_2.dptr_	));
+												in_desc_, temp2_.data.dptr_	));
 		// copy into temps
-		Copy(inputLayer_->getpAct()->data, pooltmp_2, stream_);
+		Copy(inputLayer_->getpAct()->data, temp2_.data, stream_);
 		}
 	}
 
 	~pool_cudnn_layer(void) {
 
 		activations_.FreeSpace();
+		temp_.FreeSpace();
+		temp2_.FreeSpace();
 
 		CUDNN_SAFE_CALL(cudnnDestroyTensorDescriptor(in_desc_));
 		CUDNN_SAFE_CALL(cudnnDestroyTensorDescriptor(out_desc_));
@@ -175,8 +173,12 @@ private:
 	int psize_;
 	int pstride_;
 	mshadow::Stream<gpu> *stream_;
-	mshadow::TensorContainer<gpu, 4> pooltmp_;
-	mshadow::TensorContainer<gpu, 4> pooltmp_2;
+
+	Node<gpu> temp_;
+	Node<gpu> temp2_;
+
+	//mshadow::TensorContainer<gpu, 4> pooltmp_;
+	//mshadow::TensorContainer<gpu, 4> pooltmp_2;
 
 protected:
 

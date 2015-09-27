@@ -21,10 +21,12 @@ using namespace std;
 
 struct augparams{
 
+	bool augment;
 	bool mirror;
 	int scaling;
 	int translation;
 	int rotation;
+	int rotation_space;
 	real_t sheering;
 	std::string background;
 
@@ -71,7 +73,7 @@ public:
 			perspective_ = false;
 		}
 		if(perspective_){
-			rotateImage_(src, src, 90, 90, 90 + myRand->uniform(-param_.rotation,param_.rotation),
+			rotateImage_(src, src, 90+ myRand->uniform(-param_.rotation_space,param_.rotation_space), 90+ myRand->uniform(-param_.rotation_space,param_.rotation_space), 90 + myRand->uniform(-param_.rotation,param_.rotation),
 					0 + myRand->uniform(-param_.translation,param_.translation), 0 + myRand->uniform(-param_.translation,param_.translation), 200 + myRand->uniform(-param_.scaling,param_.scaling),200,
 					myRand->uniform(-param_.sheering,param_.sheering), myRand->uniform(-param_.sheering,param_.sheering) );
 

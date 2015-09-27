@@ -80,6 +80,8 @@ struct UpdaterParam {
     }
     //lr schedule
     learning_rate = learning_rate < lr_minimum ? lr_minimum : learning_rate;
+    learning_rate = epoch < 150 ? learning_rate : 0.001; //HARDFUCK
+    learning_rate = epoch < 200 ? learning_rate : 0.0001; //HARDFUCK
 
     //momentum schedule
     if (momentum_schedule) {

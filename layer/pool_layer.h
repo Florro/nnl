@@ -44,7 +44,6 @@ public:
 										  inputLayer_->getpAct()->data.size(1),
 										  std::min(inputLayer_->getpAct()->data.size(2) - psize_ + pstride_ - 1, inputLayer_->getpAct()->data.size(2) - 1) / pstride_ + 1,
 										  std::min(inputLayer_->getpAct()->data.size(3) - psize_ + pstride_ - 1, inputLayer_->getpAct()->data.size(3) - 1) / pstride_ + 1);
-
 	}
 
 	Node<xpu>* getpAct(void){
@@ -58,6 +57,7 @@ public:
 
 		// max pooling
 		activations_.data = pool<pooltype>(inputLayer_->getpAct()->data, activations_.data[0][0].shape_, psize_, psize_, pstride_);
+
 		Copy(pooltmp_, activations_.data, stream_);
 
 
