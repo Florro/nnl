@@ -110,7 +110,7 @@ class batchnorm_layer : public ILayer<xpu> {
     mshadow::Tensor<xpu, 4> &in = inputLayer_->getpAct()->data;
     mshadow::Tensor<xpu, 4> &out = activations_.data;
 
-    float scale = 1.0f / in.shape_.Size() * channel_;
+    real_t scale = 1.0f / in.shape_.Size() * channel_;
 
     if (is_train) {
       mshadow::Copy(temp_, in, temp_.stream_);
@@ -203,7 +203,7 @@ class batchnorm_layer : public ILayer<xpu> {
   }
 
  private:
-  mshadow::Random<xpu> *prnd_;
+
   int channel_;
   mshadow::Shape<4> in_shape_;
   mshadow::TensorContainer<xpu, 1> wtf_;
@@ -218,10 +218,10 @@ class batchnorm_layer : public ILayer<xpu> {
   mshadow::TensorContainer<xpu, 1> running_exp_;
   mshadow::TensorContainer<xpu, 1> running_var_;
   mshadow::TensorContainer<xpu,4> temp_;
-  float init_slope_;
-  float init_bias_;
-  float eps_;
-  float bn_momentum_;
+  real_t init_slope_;
+  real_t init_bias_;
+  real_t eps_;
+  real_t bn_momentum_;
   Node<xpu> activations_;
   ILayer<xpu>* inputLayer_;
 

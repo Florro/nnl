@@ -29,7 +29,7 @@
 
 #include "mshadow/tensor.h"
 #include "../utility/mshadow_op.h"
-#include "../utility/image_augmenter2.h"
+#include "../utility/image_augmenter.h"
 
 namespace configurator{
 
@@ -184,10 +184,6 @@ class ConfigIterator: public ConfigStreamReader {
 };
 
 
-template<typename xpu>
-void setSoftmaxLayer(std::vector< ILayer<xpu>* > &architecture, Loss_layer<xpu>*& losslayer){
-	losslayer = new Softmax_layer<xpu>(architecture.back());
-}
 
 bool getpair(const char* &name, const char* &val, std::pair<std::string, std::string> line){
 
@@ -207,6 +203,79 @@ bool getpair(const char* &name, const char* &val, std::pair<std::string, std::st
 
 	return true;
 }
+
+
+
+//Get batchsize from config
+int getbatchsize(std::vector< std::pair < std::string, std::string > > &cfg){
+	int batchsize = 0;
+
+	for(unsigned i = 0; i < cfg.size(); i++){
+		const char *name = cfg[i].first.c_str();
+		const char *val = cfg[i].second.c_str();
+
+		if(!strcmp(name, "batchsize")){
+			batchsize = atoi(val);
+		}
+	}
+
+	return batchsize;
+}
+
+//Get batchsize from config
+int getepochs(std::vector< std::pair < std::string, std::string > > &cfg){
+	int epochs = 0;
+
+	for(unsigned i = 0; i < cfg.size(); i++){
+		const char *name = cfg[i].first.c_str();
+		const char *val = cfg[i].second.c_str();
+
+		if(!strcmp(name, "epochs")){
+			epochs = atoi(val);
+		}
+	}
+
+	return epochs;
+}
+
+
+//Get batchsize from config
+std::vector<int> getdevices(std::vector< std::pair < std::string, std::string > > &cfg){
+	std::vector<int> devices;
+
+	for(unsigned i = 0; i < cfg.size(); i++){
+			const char *name = cfg[i].first.c_str();
+			const char *val = cfg[i].second.c_str();
+
+			if(!strcmp(name, "devices")){
+				std::string str(val);
+				std::string delimiter = ",";
+
+				size_t pos = 0;
+				std::string token;
+				while ((pos = str.find(delimiter)) != std::string::npos) {
+					token = str.substr(0, pos);
+					devices.push_back(atoi(token.c_str()));
+					str.erase(0, pos + delimiter.length());
+				}
+				devices.push_back(atoi(str.c_str()));
+			}
+	}
+
+	return devices;
+}
+
+
+
+
+
+template<typename xpu>
+void setSoftmaxLayer(std::vector < std::pair <std::string, std::string > > &cfg, std::vector< ILayer<xpu>* > &architecture, Loss_layer<xpu>*& losslayer){
+	int batchsize = getbatchsize(cfg);
+	losslayer = new Softmax_layer<xpu>(architecture.back(), batchsize);
+}
+
+
 
 template<typename xpu>
 void setDataLayer(std::vector < std::pair <std::string, std::string > > &cfg, int &i, std::vector< ILayer<xpu>* > &architecture, mshadow::Stream<xpu> *stream, Random<xpu, real_t> &rnd){
@@ -446,12 +515,12 @@ void setBatchNormLayer(std::vector < std::pair <std::string, std::string > > &cf
 			utility::Check(bn_momentum > 0 && bn_momentum < 1, "batch norm momentum must be between 0 and 1");
 		}
 		else{
-			utility::Error("Unknown Dropout Layer Parameter: %s", name);
+			utility::Error("Unknown Batchnorm Layer Parameter: %s", name);
 		}
 		i++;
 	}
 
-	architecture.push_back(new batchnorm_layer<xpu, false>(architecture.back(), init_slope,  init_bias,  eps,  bn_momentum));
+	architecture.push_back(new batchnorm_layer<xpu, true>(architecture.back(), init_slope,  init_bias,  eps,  bn_momentum));
 	architecture.back()->InitLayer(stream,rnd);
 	i--;
 }
@@ -511,43 +580,43 @@ void setSGDGlobalParams(std::vector < std::pair <std::string, std::string > > &c
 	while(getpair(name, val, cfg[i])){
 			if(!strcmp(name, "lr_schedule")){
 				hyperparam->lr_schedule = atoi(val);
-				utility::Check(hyperparam->lr_schedule == 1 || hyperparam->lr_schedule == 0, "Learning schedule has to be 1 or 0: %i", val);
+				utility::Check(hyperparam->lr_schedule == 1 || hyperparam->lr_schedule == 0, "Learning schedule has to be 1 or 0: %s", val);
 			}
 			else if(!strcmp(name, "momentum_schedule")){
 				hyperparam->momentum_schedule = atoi(val);
-				utility::Check(hyperparam->momentum_schedule == 1 || hyperparam->momentum_schedule == 0, "Momentum schedule has to be 1 or 0: %i", val);
+				utility::Check(hyperparam->momentum_schedule == 1 || hyperparam->momentum_schedule == 0, "Momentum schedule has to be 1 or 0: %s", val);
 			}
 			else if(!strcmp(name, "base_lr_")){
 				hyperparam->base_lr_ = atof(val);
-				utility::Check(hyperparam->base_lr_ > 0, "Base learning rate must be greater than 0: %i", val);
+				utility::Check(hyperparam->base_lr_ > 0, "Base learning rate must be greater than 0: %s", val);
 			}
 			else if(!strcmp(name, "lr_decay")){
 				hyperparam->lr_decay = atof(val);
-				utility::Check(hyperparam->lr_decay > 0 && hyperparam->lr_decay < 1, "learning rate decay must be between 0 and 1: %i", val);
+				utility::Check(hyperparam->lr_decay > 0 && hyperparam->lr_decay < 1, "learning rate decay must be between 0 and 1: %s", val);
 			}
 			else if(!strcmp(name, "lr_minimum")){
 				hyperparam->lr_minimum = atof(val);
-				utility::Check(hyperparam->lr_minimum > 0, "learning rate minimum must be greater than 0: %i", val);
+				utility::Check(hyperparam->lr_minimum > 0, "learning rate minimum must be greater than 0: %s", val);
 			}
 			else if(!strcmp(name, "base_momentum")){
 				hyperparam->base_momentum_ = atof(val);
-				utility::Check(hyperparam->base_momentum_ > 0 && hyperparam->base_momentum_ < 1, "base momentum must be between 0 and 1: %i", val);
+				utility::Check(hyperparam->base_momentum_ > 0 && hyperparam->base_momentum_ < 1, "base momentum must be between 0 and 1: %s", val);
 			}
 			else if(!strcmp(name, "final_momentum")){
 				hyperparam->final_momentum_ = atof(val);
-				utility::Check(hyperparam->final_momentum_ > 0 && hyperparam->final_momentum_ < 1, "final momentum must be between 0 and 1: %i", val);
+				utility::Check(hyperparam->final_momentum_ > 0 && hyperparam->final_momentum_ < 1, "final momentum must be between 0 and 1: %s", val);
 			}
 			else if(!strcmp(name, "saturation_epoch")){
 				hyperparam->saturation_epoch_ = atoi(val);
-				utility::Check(hyperparam->saturation_epoch_ >= 0, "saturation epoch must be positive: %i", val);
+				utility::Check(hyperparam->saturation_epoch_ >= 0, "saturation epoch must be positive: %s", val);
 			}
 			else if(!strcmp(name, "weightdecay")){
 				hyperparam->weightdecay = atof(val);
-				utility::Check( hyperparam->weightdecay   >= 0 && hyperparam->weightdecay < 1,  "weightdecay must be between 0 and 1: %i", val );
+				utility::Check( hyperparam->weightdecay   >= 0 && hyperparam->weightdecay < 1,  "weightdecay must be between 0 and 1: %s", val );
 			}
 			else if(!strcmp(name, "clipgradient")){
 				hyperparam->clipgradient = atof(val);
-				utility::Check( hyperparam->clipgradient  >= 0,  "weightdecay must be positive: %i", val );
+				utility::Check( hyperparam->clipgradient  >= 0,  "weightdecay must be positive: %s", val );
 			}
 			else if(!strcmp(name, "epochs")){
 				hyperparam->epochs = atoi(val);
@@ -575,7 +644,7 @@ void setGPUGlobalParams(std::vector < std::pair <std::string, std::string > > &c
 	while(getpair(name, val, cfg[i])){
 			if(!strcmp(name, "lr_schedule")){
 				hyperparam->lr_schedule = atoi(val);
-				utility::Check(hyperparam->lr_schedule == 1 || hyperparam->lr_schedule == 0, "Learning schedule has to be 1 or 0: %i", val);
+				utility::Check(hyperparam->lr_schedule == 1 || hyperparam->lr_schedule == 0, "Learning schedule has to be 1 or 0: %s", val);
 			}
 			else{
 				utility::Error("Unknown Global parameter: %s", name);
@@ -638,7 +707,7 @@ void readNetConfig(std::vector < std::pair <std::string, std::string > > &cfg, s
 				}
 			}else if(!strcmp(name, "Loss")){
 				if(!strcmp(val, "Softmax")){
-					setSoftmaxLayer<xpu>(architecture, losslayer);
+					setSoftmaxLayer<xpu>(cfg, architecture, losslayer);
 				}
 				else{
 					utility::Error("Unknown Loss Type: %s", val);
@@ -685,16 +754,6 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 	const char *val = "empty";
 	std::vector<int> devices;
 
-	augparameter.augment = false;
-	augparameter.mirror = false;
-	augparameter.scaling = 0.0;
-	augparameter.translation = 0;
-	augparameter.rotation = 0; //other axis commented out
-	augparameter.rotation_space = 0;
-	augparameter.sheering = 0.0f;
-	augparameter.background = "white";
-	augparameter.classweights_saturation_epoch = 1;
-
 	while(getpair(name, val, cfg[i])){
 			if(!strcmp(name, "trainpath")){
 				trainpath = val;
@@ -704,48 +763,89 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 			}
 			else if(!strcmp(name, "mirror")){
 				if(!strcmp(val, "true")){
-					augparameter.mirror = true;
+					augparameter.mirror_ = true;
 				}else if(!strcmp(val, "false")){
-					augparameter.mirror  = false;
+					augparameter.mirror_  = false;
 				}
 				else{
 					utility::Error("Wrong mirror flag: %s", val);
 				}
 			}
-			else if(!strcmp(name, "augment")){
+			else if(!strcmp(name, "rand_crop")){
 				if(!strcmp(val, "true")){
-					augparameter.augment = true;
+					augparameter.rand_crop_ = true;
 				}else if(!strcmp(val, "false")){
-					augparameter.augment  = false;
+					augparameter.rand_crop_  = false;
 				}
 				else{
-					utility::Error("Wrong augment flag: %s", val);
+					utility::Error("Wrong rand_crop flag: %s", val);
 				}
 			}
-			else if(!strcmp(name, "scaling")){
-				augparameter.scaling = atof(val);
-				utility::Check(augparameter.scaling >= 0, "scaling must be positive: %i", val);
+			else if(!strcmp(name, "fill_value")){
+				augparameter.fill_value_ = atoi(val);
+				utility::Check(augparameter.fill_value_ >= 0 && augparameter.fill_value_ < 257, "fill_value_ must be between 0 and 256: %s", val);
 			}
-			else if(!strcmp(name, "translation")){
-				augparameter.translation = atoi(val);
-				utility::Check(augparameter.translation >= 0, "translation must be positive: %i", val);
+			else if(!strcmp(name, "max_shear_ratio")){
+				augparameter.max_shear_ratio_ = atof(val);
+				utility::Check(augparameter.max_shear_ratio_ >= 0 && augparameter.max_shear_ratio_ < 1, "max_shear_ratio must  be between 0 and 1: %s", val);
 			}
-			else if(!strcmp(name, "rotation")){
-				augparameter.rotation = atoi(val);
-				utility::Check(augparameter.rotation >= 0, "rotation must be positive: %i", val);
+			else if(!strcmp(name, "max_rotate_angle")){
+				augparameter.max_rotate_angle_ = atoi(val);
+				utility::Check(augparameter.max_rotate_angle_ >= 0, "rotation must be positive: %s", val);
 			}
-			else if(!strcmp(name, "rotation_space")){
-				augparameter.rotation_space = atoi(val);
-				utility::Check(augparameter.rotation_space >= 0 && augparameter.rotation_space < 90, "rotation_space must be positive and lower than 90: %i", val);
+			else if(!strcmp(name, "max_aspect_ratio")){
+				augparameter.max_aspect_ratio_ = atof(val);
+				utility::Check(augparameter.max_aspect_ratio_ >= 0 && augparameter.max_aspect_ratio_ < 1, "max_aspect_ratio must  be between 0 and 1: %s", val);
 			}
-			else if(!strcmp(name, "sheering")){
-				augparameter.sheering = atof(val);
-				utility::Check(augparameter.sheering >= 0, "sheering must be positive: %i", val);
+			else if(!strcmp(name, "min_crop_size")){
+				augparameter.min_crop_size_ = atoi(val);
+				utility::Check(augparameter.min_crop_size_ >= 0, "min_crop_size must be positive: %s", val);
 			}
-			else if(!strcmp(name, "background")){
-				augparameter.background = val;
-				utility::Check(augparameter.background == "white" || augparameter.background == "black" || augparameter.background == "gray", "background must be either black, white or gray %s", val);
+			else if(!strcmp(name, "max_crop_size")){
+				augparameter.max_crop_size_ = atoi(val);
+				utility::Check(augparameter.max_crop_size_ >= 0, "max_crop_size must be positive: %s", val);
 			}
+			else if(!strcmp(name, "min_random_scale")){
+				augparameter.min_random_scale_ = atof(val);
+				utility::Check(augparameter.min_random_scale_ >= 0, "min_random_scale must be positive: %s", val);
+			}
+			else if(!strcmp(name, "max_random_scale")){
+				augparameter.max_random_scale_ = atof(val);
+				utility::Check(augparameter.max_random_scale_ >= 0, "max_random_scale must be positive: %s", val);
+			}
+			else if(!strcmp(name, "min_img_size")){
+				augparameter.min_img_size_ = atoi(val);
+				utility::Check(augparameter.min_img_size_ >= 0, "min_img_size must be positive: %s", val);
+			}
+			else if(!strcmp(name, "max_img_size")){
+				augparameter.max_img_size_ = atoi(val);
+				utility::Check(augparameter.max_img_size_ >= 0, "max_img_size must be positive: %s", val);
+			}
+			else if(!strcmp(name, "input_shape")){
+				std::string str(val);
+				std::string delimiter = ",";
+				std::vector<int> shape;
+
+				size_t pos = 0;
+				std::string token;
+				while ((pos = str.find(delimiter)) != std::string::npos) {
+					token = str.substr(0, pos);
+					shape.push_back(atof(token.c_str()));
+					str.erase(0, pos + delimiter.length());
+				}
+				shape.push_back(atof(str.c_str()));
+				utility::Check(shape.size() == 3, "input shape must be 3 dimensional: color,y,x");
+
+				for(int s = 0; s < 3; s++){
+					utility::Check(shape[s] > 0, "input dimensions must be positive: %i", shape[i]);
+				}
+				utility::Check(shape[1] == shape[2], "Non quadratic inputs are not supported!");
+				utility::Check(shape.size() == 3, "input shape must be 3 dimensional: color,y,x");
+
+				augparameter.net_input_shape_ = Shape3(shape[0], shape[1], shape[2]);
+			}
+
+
 			else if(!strcmp(name, "classweights_start")){
 				std::string str(val);
 				std::string delimiter = ",";
@@ -848,90 +948,6 @@ std::vector < std::pair <std::string, std::string > > readcfg(string cfgfile){
 
 }
 
-//Get batchsize from config
-int getbatchsize(std::vector< std::pair < std::string, std::string > > &cfg){
-	int batchsize = 0;
-
-	for(unsigned i = 0; i < cfg.size(); i++){
-		const char *name = cfg[i].first.c_str();
-		const char *val = cfg[i].second.c_str();
-
-		if(!strcmp(name, "batchsize")){
-			batchsize = atoi(val);
-		}
-	}
-
-	return batchsize;
-}
-
-//Get batchsize from config
-int getepochs(std::vector< std::pair < std::string, std::string > > &cfg){
-	int epochs = 0;
-
-	for(unsigned i = 0; i < cfg.size(); i++){
-		const char *name = cfg[i].first.c_str();
-		const char *val = cfg[i].second.c_str();
-
-		if(!strcmp(name, "epochs")){
-			epochs = atoi(val);
-		}
-	}
-
-	return epochs;
-}
-
-//Get batchsize from config
-bool getaugmentflag(std::vector< std::pair < std::string, std::string > > &cfg){
-	bool augment = false;
-
-	for(unsigned i = 0; i < cfg.size(); i++){
-		const char *name = cfg[i].first.c_str();
-		const char *val = cfg[i].second.c_str();
-
-		if(!strcmp(name, "augment")){
-			if(!strcmp(val, "true")){
-				augment = true;
-			}else if(!strcmp(val, "false")){
-				augment  = false;
-			}
-			else{
-				utility::Error("Wrong augment flag: %s", val);
-			}
-		}
-		else{
-			utility::Error("Augment flag not specified for getaugmentflag function!");
-		}
-	}
-
-	return augment;
-}
-
-
-//Get batchsize from config
-std::vector<int> getdevices(std::vector< std::pair < std::string, std::string > > &cfg){
-	std::vector<int> devices;
-
-	for(unsigned i = 0; i < cfg.size(); i++){
-			const char *name = cfg[i].first.c_str();
-			const char *val = cfg[i].second.c_str();
-
-			if(!strcmp(name, "devices")){
-				std::string str(val);
-				std::string delimiter = ",";
-
-				size_t pos = 0;
-				std::string token;
-				while ((pos = str.find(delimiter)) != std::string::npos) {
-					token = str.substr(0, pos);
-					devices.push_back(atoi(token.c_str()));
-					str.erase(0, pos + delimiter.length());
-				}
-				devices.push_back(atoi(str.c_str()));
-			}
-	}
-
-	return devices;
-}
 
 
 }

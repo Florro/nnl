@@ -78,16 +78,25 @@ struct UpdaterParam {
       case 1: learning_rate = base_lr_ * powf(lr_decay, float(epoch)); break;
       default: utility::Error("Unknown learning rate schedule!");
     }
+
     //lr schedule
     learning_rate = learning_rate < lr_minimum ? lr_minimum : learning_rate;
-    learning_rate = epoch < 150 ? learning_rate : 0.001; //HARDFUCK
-    learning_rate = epoch < 200 ? learning_rate : 0.0001; //HARDFUCK
+    //learning_rate = epochs < 150 ? learning_rate : 0.001;
+    //learning_rate = epochs < 300 ? learning_rate : 0.0001;
+
 
     //momentum schedule
     if (momentum_schedule) {
 	  momentum = epoch * (final_momentum_ - base_momentum_) / saturation_epoch_ + base_momentum_;
 	}
 	momentum = momentum < final_momentum_ ? momentum : final_momentum_;
+
+
+
+
+
+
+
   }
 
 

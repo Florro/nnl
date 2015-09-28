@@ -72,7 +72,7 @@ public:
 		  int step = batch_size_ / ndev_;
 
 		  // Create Batch-loaders for Data with max chunkSize and shuffle
-		  dataload::dataBatchLoader_mthread trainDataLoader(chunkSize, true, true, cfg_);
+		  dataload::dataBatchLoader_mthread trainDataLoader(chunkSize, true, cfg_);
 
 		  //Epochs loop
 		  for (int i = 0; i <= epochs_; ++ i){
@@ -87,8 +87,12 @@ public:
 				  // Load databatch from disk
 				  trainDataLoader.readBatch();
 
-					  // running parallel threads
-				  #pragma omp parallel num_threads(ndev_)
+				  //train statistcs
+				  real_t train_nerr = 0;
+				  real_t train_logloss = 0;
+
+				  // running parallel threads
+				  #pragma omp parallel num_threads(ndev_) reduction(+:train_nerr,train_logloss)
 				  {
 					int tid = omp_get_thread_num();
 					mshadow::SetDevice<xpu>(devs_[tid]);
@@ -104,14 +108,13 @@ public:
 					  nets_[tid]->Forward(trainDataLoader.Data().Slice(j + tid * step, j + (tid + 1) * step), pred, true);
 					  // run backprop
 					  nets_[tid]->Backprop(&trainDataLoader.Labels()[j + tid * step]);
+					  // eval pred
+					  this->eval_pred_(pred, &trainDataLoader.Labels()[j + tid * step], train_nerr, train_logloss);
 					}
 				  }
 
 				  // evaluation
 				  printf("Epoch: %i, Masterbatch: %u/%u, Train: ", i, b, trainDataLoader.numBatches());
-				  real_t train_nerr = 0;
-				  real_t train_logloss = 0;
-				  this->predict_batch_(trainDataLoader.Data(), trainDataLoader.Labels(), train_nerr, train_logloss);
 				  printf("%.2f%% ", (1.0 - (real_t)train_nerr/trainDataLoader.Data().size(0))*100);
 				  printf("logloss %.4f\n", (-(real_t)train_logloss/trainDataLoader.Data().size(0)));
 				  b++;
@@ -123,7 +126,7 @@ public:
 
 
 			  //Cout logging
-			  dataload::dataBatchLoader_mthread testDataLoader(chunkSize, false, false, cfg_);
+			  dataload::dataBatchLoader_mthread testDataLoader(chunkSize, false, cfg_);
 			  testDataLoader.start_epoch(1);
 
 			  std::cout << "Test: ";
@@ -167,7 +170,7 @@ public:
 		  }
 
 		  // Create Batch-loaders for Data with max chunkSize and shuffle
-		  dataload::dataBatchLoader_mthread testDataLoader(chunkSize, false, false, cfg_);
+		  dataload::dataBatchLoader_mthread testDataLoader(chunkSize, false, cfg_);
 		  testDataLoader.start_epoch(1);
 
 		  //Cout logging
@@ -214,11 +217,18 @@ private:
 	std::string net_;
 	std::vector<int> devs_;
 	std::vector<INNet *> nets_;
-	TensorContainer<cpu, 4, real_t> xtrain_augmented_;
     std::string logfile_;
     std::vector < std::pair <std::string, std::string > > cfg_;
     int batch_size_;
     int epochs_;
+
+    void eval_pred_(TensorContainer<cpu, 2, real_t> &pred, int* ytest, real_t & ext_nerr, real_t & ext_logloss){
+    	 for (int k = 0; k < pred.size(0); ++ k) {
+    		 ext_nerr   += MaxIndex(pred[k]) != *(ytest + k);
+    		 ext_logloss += save_log(pred[ k ][*(ytest + k)]);
+		 }
+    }
+
 
     void predict_batch_(TensorContainer<cpu, 4, real_t> &xtest, std::vector<int> &ytest, real_t & ext_nerr, real_t & ext_logloss){
 		// mini-batch per device
