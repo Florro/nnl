@@ -58,19 +58,21 @@ inline int Run(int argc, char *argv[]) {
   std::string test_path;
 
   //Read config file
-  std::string net(argv[2]);
+  std::string net(argv[1]);
   std::vector < std::pair <std::string, std::string > > cfg = configurator::readcfg(net + "/config.conf");
+  std::string mode = configurator::getmode(cfg);
 
   //Create nn trainer
   nntrainer<xpu>* mynntrainer = new nntrainer<xpu>(net, cfg);
 
+
+
   //train routine
   double wall0 = utility::get_wall_time();
-  if(!strcmp(argv[1], "train")){
-	  //mynntrainer->save_weights();
+  if(mode == "train"){
 	  mynntrainer->trainvalidate_batchwise( 50000 );
-  }else if (!strcmp(argv[1], "predict")){
-	  mynntrainer->predict(100000, 75);
+  }else if (mode == "predict"){
+	  mynntrainer->predict( 50000 );
   }
   else{
 	  utility::Error("Unknown control parameter: %s, use train/predict", argv[argc-1]);
@@ -88,18 +90,12 @@ inline int Run(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
 
-  if (argc < 3) {
-    printf("Usage: <device> devicelist\n"\
-           "\tExample1: ./nnet_ps cpu 1 2 3\n"\
-           "\tExample2: ./nnet_ps gpu 0 1\n");
+  if (argc < 2) {
+    printf("Usage: nnl <config>");
     return 0;
   }
-  if (!strcmp(argv[1], "cpu")) {
-    Run<mshadow::cpu>(argc, argv);
-  } else {
-    Run<mshadow::gpu>(argc, argv);
-  }
 
+  Run<mshadow::gpu>(argc, argv);
 
   return 0;
 

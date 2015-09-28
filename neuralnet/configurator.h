@@ -223,6 +223,42 @@ int getbatchsize(std::vector< std::pair < std::string, std::string > > &cfg){
 }
 
 //Get batchsize from config
+int getstartepoch(std::vector< std::pair < std::string, std::string > > &cfg){
+	int start_epoch = 0;
+
+	for(unsigned i = 0; i < cfg.size(); i++){
+		const char *name = cfg[i].first.c_str();
+		const char *val = cfg[i].second.c_str();
+
+		if(!strcmp(name, "start_epoch")){
+			start_epoch = atoi(val);
+		}
+	}
+
+	return start_epoch;
+}
+
+//Get batchsize from config
+std::string getmode(std::vector< std::pair < std::string, std::string > > &cfg){
+
+	for(unsigned i = 0; i < cfg.size(); i++){
+		const char *name = cfg[i].first.c_str();
+		const char *val = cfg[i].second.c_str();
+
+		if(!strcmp(name, "mode")){
+			std::string mode(val);
+			return mode;
+		}
+
+
+	}
+
+	utility::Error("Mode not specified! Choose train/predict");
+	return "error";
+
+}
+
+//Get batchsize from config
 int getepochs(std::vector< std::pair < std::string, std::string > > &cfg){
 	int epochs = 0;
 
@@ -723,16 +759,6 @@ void readNetConfig(std::vector < std::pair <std::string, std::string > > &cfg, s
 					utility::Error("Unknown Minimizer: %s", val);
 				}
 			}
-			else if(!strcmp(name, "Devices")){
-				if(!strcmp(val, "GPU")){
-					setSGDGlobalParams(cfg, i, hyperparam);
-				}
-				else{
-					utility::Error("Unknown Minimizer: %s", val);
-				}
-			}
-
-
 		}
 		else{
 			utility::Error("Incorrect config mode");
@@ -890,7 +916,12 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 				}
 				devices.push_back(atoi(str.c_str()));
 			}
-
+			else if(!strcmp(name, "mode")){
+				//HARDFUCK guard
+			}
+			else if(!strcmp(name, "start_epoch")){
+				//HARDFUCK guard
+			}
 
 			else{
 				utility::Error("Unknown Dataconfig parameter: %s", name);
@@ -942,7 +973,6 @@ std::vector < std::pair <std::string, std::string > > readcfg(string cfgfile){
 		myreader->Next();
 		cfg.push_back(std::make_pair(myreader->name(), myreader->val()));
 	}
-
 
 	return cfg;
 

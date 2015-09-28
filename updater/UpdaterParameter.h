@@ -81,8 +81,8 @@ struct UpdaterParam {
 
     //lr schedule
     learning_rate = learning_rate < lr_minimum ? lr_minimum : learning_rate;
-    //learning_rate = epochs < 150 ? learning_rate : 0.001;
-    //learning_rate = epochs < 300 ? learning_rate : 0.0001;
+    learning_rate = epochs < 150 ? learning_rate : 0.001;
+    learning_rate = epochs < 250 ? learning_rate : 0.0001;
 
 
     //momentum schedule

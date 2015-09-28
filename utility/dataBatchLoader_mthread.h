@@ -217,7 +217,7 @@ dataBatchLoader_mthread::dataBatchLoader_mthread(const unsigned int & chunkSize,
 		nthread_ = std::max(omp_get_num_procs() / 2 - 1, 1);
 	}
 	for(int i = 0; i <= nthread_; i++){
-		myIAs_.push_back(new cvimg::ImageAugmenter(augparameter_));
+		myIAs_.push_back(new cvimg::ImageAugmenter(augparameter_, is_train));
 	}
 	for(int i = 0; i <= nthread_; i++){
 		myRands_.push_back(new RNGen());

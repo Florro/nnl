@@ -57,6 +57,9 @@ public:
 		  epochs_ = configurator::getepochs(cfg_);
 
 		  utility::Check( (float(batch_size_) / float(ndev_) == (batch_size_ / ndev_) ), "Batchsize(%i) has to be divisible by ndev(%i)", batch_size_, ndev_);
+
+		  start_epoch_ = configurator::getstartepoch(cfg);
+
 	}
 
 
@@ -64,9 +67,12 @@ public:
 
 
 		  // load weights
-		  for(int i = 0; i < ndev_; i++){
-			  //nets_[i]->load_weights(net_, 25);
+		  if(start_epoch_ != 0){
+			  for(int i = 0; i < ndev_; i++){
+				  nets_[i]->load_weights(net_, start_epoch_);
+			  }
 		  }
+
 
 		  int num_out = nets_[0]->get_outputdim();
 		  int step = batch_size_ / ndev_;
@@ -75,7 +81,7 @@ public:
 		  dataload::dataBatchLoader_mthread trainDataLoader(chunkSize, true, cfg_);
 
 		  //Epochs loop
-		  for (int i = 0; i <= epochs_; ++ i){
+		  for (int i = start_epoch_; i <= epochs_; ++ i){
 
 
 			  double wall0 = utility::get_wall_time();
@@ -115,8 +121,12 @@ public:
 
 				  // evaluation
 				  printf("Epoch: %i, Masterbatch: %u/%u, Train: ", i, b, trainDataLoader.numBatches());
-				  printf("%.2f%% ", (1.0 - (real_t)train_nerr/trainDataLoader.Data().size(0))*100);
-				  printf("logloss %.4f\n", (-(real_t)train_logloss/trainDataLoader.Data().size(0)));
+				  real_t acc_train = (1.0 - (real_t)train_nerr/trainDataLoader.Data().size(0))*100;
+				  real_t log_train = (-(real_t)train_logloss/trainDataLoader.Data().size(0));
+				  printf("%.2f%% ", acc_train);
+				  printf("logloss %.4f\n", log_train);
+				  utility::write_val_to_file< float >(logfile_.c_str(), acc_train, false);
+				  utility::write_val_to_file< float >(logfile_.c_str(), log_train, false);
 				  b++;
 
 			  }
@@ -162,12 +172,18 @@ public:
 		}
 
 
-	void predict( unsigned chunkSize, unsigned epoch) {
+	void predict( unsigned chunkSize) {
 
 		  // mini-batch per device
-		  for(int i = 0; i < ndev_; i++){
-			  nets_[i]->load_weights(net_, epoch);
+		  if(start_epoch_ != 0){
+			  for(int i = 0; i < ndev_; i++){
+				  nets_[i]->load_weights(net_, start_epoch_);
+			  }
 		  }
+		  else{
+			  utility::Error("Prediction with uninitialized net makes not much sense");
+		  }
+
 
 		  // Create Batch-loaders for Data with max chunkSize and shuffle
 		  dataload::dataBatchLoader_mthread testDataLoader(chunkSize, false, cfg_);
@@ -221,6 +237,7 @@ private:
     std::vector < std::pair <std::string, std::string > > cfg_;
     int batch_size_;
     int epochs_;
+    int start_epoch_;
 
     void eval_pred_(TensorContainer<cpu, 2, real_t> &pred, int* ytest, real_t & ext_nerr, real_t & ext_logloss){
     	 for (int k = 0; k < pred.size(0); ++ k) {

@@ -59,6 +59,23 @@ struct augparams{
 
 	}
 
+	void reset(){ //HARDFUCK
+
+		mirror_ = false;
+		rand_crop_= false;
+		fill_value_ = 255;
+		max_aspect_ratio_ = 0.0;
+		max_rotate_angle_=0;
+		max_shear_ratio_=0;
+		min_crop_size_= -1;
+		max_crop_size_= -1;
+		min_random_scale_ = 1.0f;
+		max_random_scale_ = 1.0f;
+		min_img_size_ = 0.0f;
+		max_img_size_ = 1e10f;
+		classweights_saturation_epoch = 1;
+
+	}
 
 };
 
@@ -66,8 +83,12 @@ struct augparams{
 class ImageAugmenter {
 public:
 
-	ImageAugmenter( augparams param ):
+	ImageAugmenter( augparams param, bool is_train ):
 						param_(param){
+
+		if(!is_train){
+			param_.reset(); //HARDFUCK
+		}
 
 	}
 
@@ -81,6 +102,23 @@ public:
 	}
 
 	cv::Mat distort(cv::Mat &src,  RNGen* myRand){
+
+
+		/*
+		std::cout << "mirror: " << param_.mirror_ << " 1" << std::endl;
+		std::cout << "rand_crop: " << param_.rand_crop_ << " 1" << std::endl;
+		std::cout << "fill_value: " << param_.fill_value_ << " 255"  << std::endl;
+		std::cout << "max_aspect_ratio: " << param_.max_aspect_ratio_  << " 0.5" << std::endl;
+		std::cout << "max_rotate_angle: " << param_.max_rotate_angle_  << " 180" << std::endl;
+		std::cout << "max_shear_ratio: " << param_.max_shear_ratio_  << " 0.5" << std::endl;
+		std::cout << "min_crop_size: " << param_.min_crop_size_  << " 80" << std::endl;
+		std::cout << "max_crop_size: " << param_.max_crop_size_  << " 80" << std::endl;
+		std::cout << "min_random_scale: " << param_.min_random_scale_  << " 0.4" << std::endl;
+		std::cout << "max_random_scale: " << param_.max_random_scale_  << " 1.8" << std::endl;
+		std::cout << "min_img_size: " << param_.min_img_size_  << " 80" << std::endl;
+		std::cout << "max_img_size: " << param_.max_img_size_  << " 136" << std::endl;
+		*/
+
 
 		// shear
 		float s = myRand->uniform(0,1) * param_.max_shear_ratio_ * 2 - param_.max_shear_ratio_;
