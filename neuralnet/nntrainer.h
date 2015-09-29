@@ -78,7 +78,7 @@ public:
 		  int step = batch_size_ / ndev_;
 
 		  // Create Batch-loaders for Data with max chunkSize and shuffle
-		  dataload::dataBatchLoader_mthread trainDataLoader(chunkSize, true, cfg_);
+		  dataload::dataBatchLoader_mthread trainDataLoader(net_, chunkSize, true, cfg_);
 
 		  //Epochs loop
 		  for (int i = start_epoch_; i <= epochs_; ++ i){
@@ -136,7 +136,7 @@ public:
 
 
 			  //Cout logging
-			  dataload::dataBatchLoader_mthread testDataLoader(chunkSize, false, cfg_);
+			  dataload::dataBatchLoader_mthread testDataLoader(net_, chunkSize, false, cfg_);
 			  testDataLoader.start_epoch(1);
 
 			  std::cout << "Test: ";
@@ -186,7 +186,7 @@ public:
 
 
 		  // Create Batch-loaders for Data with max chunkSize and shuffle
-		  dataload::dataBatchLoader_mthread testDataLoader(chunkSize, false, cfg_);
+		  dataload::dataBatchLoader_mthread testDataLoader(net_, chunkSize, false, cfg_);
 		  testDataLoader.start_epoch(1);
 
 		  //Cout logging

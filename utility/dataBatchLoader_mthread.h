@@ -9,7 +9,6 @@
 #define DATABATCHLOADER_MTHREAD_H_
 
 #include "mshadow/tensor.h"
-#include "mshadow-ps/mshadow_ps.h"
 #include "../utility/image_augmenter.h"
 #include "util.h"
 #include <algorithm>
@@ -93,7 +92,7 @@ public:
 	/*
 	 * Create a 'dataBatchLoader' to read from 'lst_path' in 'batchSize' chunks
 	 */
-	dataBatchLoader_mthread(const unsigned int & batchSize, const bool & is_train, std::vector < std::pair <std::string, std::string > > & cfg);
+	dataBatchLoader_mthread(std::string net, const unsigned int & batchSize, const bool & is_train, std::vector < std::pair <std::string, std::string > > & cfg);
 
 	/*
 	 * Destructor
@@ -174,6 +173,10 @@ private:
 	std::vector<cvimg::ImageAugmenter* > myIAs_;               // data structure to augment data
 
 	int nthread_;
+
+	std::string net_;
+
+	bool image_mean_existend_;
 };
 
 dataBatchLoader_mthread:: ~dataBatchLoader_mthread(void){
@@ -187,12 +190,14 @@ dataBatchLoader_mthread:: ~dataBatchLoader_mthread(void){
 
 }
 
-dataBatchLoader_mthread::dataBatchLoader_mthread(const unsigned int & chunkSize, const bool & is_train, std::vector < std::pair <std::string, std::string > > &cfg)
+dataBatchLoader_mthread::dataBatchLoader_mthread(std::string net, const unsigned int & chunkSize, const bool & is_train, std::vector < std::pair <std::string, std::string > > &cfg)
 : mPicSize_(0), maxchunkSize_(chunkSize), mchunkSize_(0), mNumBatches(0), mNumChannels_(0),
   mReadCounter_(0), mReadPos_(0), is_train_(is_train), mSize_(0), mPath_(""), mNumBatches__(false),
   cfg_(cfg),
   epoch_count_(0),
-  nthread_(4)
+  nthread_(4),
+  image_mean_existend_(false),
+  net_(net)
 {
 
 	std::string trainpath;
@@ -222,6 +227,62 @@ dataBatchLoader_mthread::dataBatchLoader_mthread(const unsigned int & chunkSize,
 	for(int i = 0; i <= nthread_; i++){
 		myRands_.push_back(new RNGen());
 	}
+
+	//Check whether image mean exists:
+	image_mean_existend_ = utility::file_existent(net_ + "/image_mean.bin");
+
+
+	//Generate image mean
+	if(!image_mean_existend_ and is_train){
+		std::cout << "Generating image mean at " << net_ + "/image_mean.bin" << std::endl;
+
+		this->load_data_list_();
+		meanimg_.Resize(Shape3(mNumChannels_,mPicSize_,mPicSize_));
+		meanimg_ = 0.0f;
+
+
+		for(unsigned i = 0; i < mImglst.size(); i++){
+			mshadow::TensorContainer<cpu, 3> tmpimg;
+			tmpimg.Resize(meanimg_.shape_);
+
+			cv::Mat img = cv::imread( mImglst[i].second, cv::IMREAD_COLOR );
+
+			for(unsigned y = 0; y < tmpimg.size(1); ++y) {
+			  for(unsigned x = 0; x < tmpimg.size(2); ++x) {
+				cv::Vec3b bgr = img.at< cv::Vec3b >(y, x);
+				// store in RGB order
+				for(unsigned k = 0; k < mNumChannels_; k++){
+					tmpimg[k][y][x] = (float)bgr[k];
+				}
+			  }
+			}
+
+			meanimg_ += tmpimg;
+
+			if( ((i % 10000 == 0) and (i != 0)) or ((i+1) == mImglst.size())){
+				std::cout << i+1 << " images processed" << std::endl;
+			}
+
+
+		}
+
+
+
+		//norm mean img
+		meanimg_ *= (1.0f / mImglst.size());
+
+		//Save image mean
+		save_tensor(meanimg_, net_ + "/image_mean.bin");
+
+		mImglst.clear();
+		image_mean_existend_ = true;
+		std::cout << std::endl;
+	}
+
+	if(!image_mean_existend_ and !is_train){
+		utility::Error("Its highly recommended to use image mean from training to predict test set!");
+	}
+
 
 }
 
@@ -269,9 +330,9 @@ void dataBatchLoader_mthread::start_epoch(unsigned epoch){
 	// Random is_train pathlist
 	if (is_train_) std::random_shuffle ( mImglst.begin(), mImglst.end() );
 
-	meanimg_.Resize(Shape3(mNumChannels_,mPicSize_,mPicSize_));//HARDFUCK
-	std::string name_meanimg_ = "/home/niklas/CXX/nnl/testNets/plankton/cxx_compare2/image_mean"; //HARDFUCK
-	load_tensor(meanimg_, name_meanimg_); //HARDFUCK
+	//Load image mean
+	meanimg_.Resize(Shape3(mNumChannels_,mPicSize_,mPicSize_));
+	load_tensor(meanimg_, net_ + "/image_mean.bin");
 
 }
 
@@ -351,16 +412,9 @@ void dataBatchLoader_mthread::Load_Images_Labels_(const unsigned & size, const u
 		  }
 		}
 
-		//meanimg_ += mImageData[i]; //HARDFUCK //just single thread!!!
-		mImageData[tid * tidsize + i] -= meanimg_; //HARDFUCK
+		mImageData[tid * tidsize + i] -= meanimg_;
 
 	}
-
-
-	//std::string name_meanimg_ = "/home/niklas/CXX/nnl/testNets/plankton/cxx_compare2/image_mean"; //HARDFUCK
-	//meanimg_ /= 20000.0f; //HARDFUCK
-	//save_tensor(meanimg_, name_meanimg_); //HARDFUCK
-
 
 }
 

@@ -152,7 +152,7 @@ public:
 						 cv::Scalar(param_.fill_value_, param_.fill_value_, param_.fill_value_));
 		cv::Mat res = temp;
 		if (param_.max_crop_size_ != -1 || param_.min_crop_size_ != -1){
-		  utils::Check(res.cols >= param_.max_crop_size_ && res.rows >= param_.max_crop_size_&&param_.max_crop_size_ >= param_.min_crop_size_,
+		  utility::Check(res.cols >= param_.max_crop_size_ && res.rows >= param_.max_crop_size_&&param_.max_crop_size_ >= param_.min_crop_size_,
 			"input image size smaller than max_crop_size");
 		  mshadow::index_t rand_crop_size = myRand->randint(param_.max_crop_size_-param_.min_crop_size_+1)+param_.min_crop_size_;
 		  mshadow::index_t y = res.rows - rand_crop_size;
@@ -168,7 +168,7 @@ public:
 		  cv::resize(res(roi), res, cv::Size(param_.net_input_shape_[1], param_.net_input_shape_[2]));
 		}
 		else{
-		  utils::Check(static_cast<mshadow::index_t>(res.cols) >= param_.net_input_shape_[1] && static_cast<mshadow::index_t>(res.rows) >= param_.net_input_shape_[2],
+		  utility::Check(static_cast<mshadow::index_t>(res.cols) >= param_.net_input_shape_[1] && static_cast<mshadow::index_t>(res.rows) >= param_.net_input_shape_[2],
 			"input image size smaller than input shape");
 		  mshadow::index_t y = res.rows - param_.net_input_shape_[2];
 		  mshadow::index_t x = res.cols - param_.net_input_shape_[1];

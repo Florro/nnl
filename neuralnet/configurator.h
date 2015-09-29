@@ -655,8 +655,8 @@ void setSGDGlobalParams(std::vector < std::pair <std::string, std::string > > &c
 				utility::Check( hyperparam->clipgradient  >= 0,  "weightdecay must be positive: %s", val );
 			}
 			else if(!strcmp(name, "epochs")){
-				hyperparam->epochs = atoi(val);
-				utility::Check( hyperparam->epochs  >= 0,  "number of epochs must be positive", val );
+				hyperparam->max_epochs = atoi(val);
+				utility::Check( hyperparam->max_epochs  >= 0,  "number of epochs must be positive", val );
 			}
 			else if(!strcmp(name, "batchsize")){
 				hyperparam->batchsize = atoi(val);

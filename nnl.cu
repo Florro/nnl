@@ -28,28 +28,6 @@
 
 
 
-
-void read_data_mnist( TensorContainer<cpu, 4, real_t> &xtrain,  TensorContainer<cpu, 4, real_t> &xtest,
-		std::vector<int> &ytrain, std::vector<int> &ytest){
-	 // settings
-	 int insize = 28;
-	 srand(0);
-
-	 // data
-	 TensorContainer<cpu, 2, real_t> xtrain_, xtest_;
-	 utility::LoadMNIST("data/mnist/train-images-idx3-ubyte", "data/mnist/train-labels-idx1-ubyte", ytrain, xtrain_, true);
-	 utility::LoadMNIST("data/mnist/t10k-images-idx3-ubyte", "data/mnist/t10k-labels-idx1-ubyte", ytest, xtest_, false);
-
-	 std::cout << std::endl;
-
-	 xtrain.Resize(Shape4(xtrain_.size(0), 1, insize, insize));
-	 xtest.Resize(Shape4(xtest_.size(0),  1, insize, insize));
-	 xtrain = reshape(xtrain_, xtrain.shape_);
-	 xtest = reshape(xtest_, xtest.shape_);
-}
-
-
-
 // multithreaded run routine
 template<typename xpu>
 inline int Run(int argc, char *argv[]) {
@@ -64,8 +42,6 @@ inline int Run(int argc, char *argv[]) {
 
   //Create nn trainer
   nntrainer<xpu>* mynntrainer = new nntrainer<xpu>(net, cfg);
-
-
 
   //train routine
   double wall0 = utility::get_wall_time();
@@ -94,9 +70,22 @@ int main(int argc, char *argv[]) {
     printf("Usage: nnl <config>");
     return 0;
   }
-
   Run<mshadow::gpu>(argc, argv);
 
   return 0;
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

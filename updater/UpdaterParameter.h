@@ -41,7 +41,7 @@ struct UpdaterParam {
    int saturation_epoch_;
 
    /*! \brief epochs  */
-   int epochs;
+   int max_epochs;
 
    /*! \brief batchsize  */
    int batchsize;
@@ -65,7 +65,7 @@ struct UpdaterParam {
 
     weightdecay = 0.00001f;
     clipgradient = 0.0f;
-    epochs = 10;
+    max_epochs = 10;
 
     batchsize = 100;
 
@@ -81,9 +81,6 @@ struct UpdaterParam {
 
     //lr schedule
     learning_rate = learning_rate < lr_minimum ? lr_minimum : learning_rate;
-    learning_rate = epochs < 150 ? learning_rate : 0.001;
-    learning_rate = epochs < 250 ? learning_rate : 0.0001;
-
 
     //momentum schedule
     if (momentum_schedule) {
@@ -91,13 +88,8 @@ struct UpdaterParam {
 	}
 	momentum = momentum < final_momentum_ ? momentum : final_momentum_;
 
-
-
-
-
-
-
   }
+
 
 
 

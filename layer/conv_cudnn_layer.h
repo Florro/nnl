@@ -231,9 +231,9 @@ public:
 
  		float alpha = 1.0f;
 		float beta = 0.0f;
+
+
 		//CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1
-
-
 		CUDNN_SAFE_CALL(cudnnConvolutionBackwardFilter_v3(handle_, &alpha,
 												  in_desc_, inputLayer_->getpAct()->data.dptr_,
 												  out_desc_, activations_.data.dptr_,
