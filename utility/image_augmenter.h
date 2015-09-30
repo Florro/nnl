@@ -89,6 +89,7 @@ public:
 		if(!is_train){
 			param_.reset(); //HARDFUCK
 		}
+		myRand = new RNGen();
 
 	}
 
@@ -101,7 +102,7 @@ public:
 
 	}
 
-	cv::Mat distort(cv::Mat &src,  RNGen* myRand){
+	cv::Mat distort(cv::Mat &src){
 
 
 		/*
@@ -199,6 +200,7 @@ private:
 	augparams param_;
 	// temporal space
 	cv::Mat temp;
+	RNGen* myRand;
 
 };
 

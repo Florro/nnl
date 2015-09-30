@@ -397,7 +397,7 @@ void dataBatchLoader_mthread::Load_Images_Labels_(const unsigned & size, const u
 		}
 
 		//distort image with opencv
-		img = myIAs_[tid]->distort(img, myRands_[tid]);
+		//img = myIAs_[tid]->distort(img, myRands_[tid]);
 
 		for(unsigned y = 0; y < mImageData.size(2); ++y) {
 		  for(unsigned x = 0; x < mImageData.size(3); ++x) {

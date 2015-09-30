@@ -46,9 +46,9 @@ inline int Run(int argc, char *argv[]) {
   //train routine
   double wall0 = utility::get_wall_time();
   if(mode == "train"){
-	  mynntrainer->trainvalidate_batchwise( 50000 );
+	  mynntrainer->trainvalidate_batchwise( );
   }else if (mode == "predict"){
-	  mynntrainer->predict( 50000 );
+	  mynntrainer->predict( );
   }
   else{
 	  utility::Error("Unknown control parameter: %s, use train/predict", argv[argc-1]);

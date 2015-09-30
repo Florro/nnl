@@ -922,7 +922,9 @@ void setDataParameter(	std::vector < std::pair <std::string, std::string > > &cf
 			else if(!strcmp(name, "start_epoch")){
 				//HARDFUCK guard
 			}
-
+			else if(!strcmp(name, "iter")){
+				//HARDFUCK guard
+			}
 			else{
 				utility::Error("Unknown Dataconfig parameter: %s", name);
 			}
