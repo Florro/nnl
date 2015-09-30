@@ -259,15 +259,12 @@ dataBatchLoader_mthread::dataBatchLoader_mthread(std::string net, const unsigned
 
 			meanimg_ += tmpimg;
 
-			if( ((i % 10000 == 0) and (i != 0)) or ((i+1) == mImglst.size())){
+			if( (((i+1) % 10000 == 0) and (i != 0)) or ((i+1) == mImglst.size())){
 				std::cout << i+1 << " images processed" << std::endl;
 			}
 
 
 		}
-
-
-
 		//norm mean img
 		meanimg_ *= (1.0f / mImglst.size());
 

@@ -285,8 +285,8 @@ private:
 			  pred.Resize(Shape2(lastsize, num_out));
 			  nets_[0]->Forward(xtest.Slice(laststart*batch_size_, xtest.size(0)), pred, false);
 			  for (int k = 0; k < lastsize; ++ k) {
-				nerr   += MaxIndex(pred[k]) != ytest[laststart + k];
-				logloss += (save_log(pred[ k ][ytest[laststart + k]]));
+				nerr   += MaxIndex(pred[k]) != ytest[laststart*batch_size_ + k];
+				logloss += (save_log(pred[ k ][ytest[laststart*batch_size_ + k]]));
 			  }
 		  }
 
