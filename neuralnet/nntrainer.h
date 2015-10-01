@@ -63,13 +63,14 @@ public:
 
 	void predict( ) {
 
-	      //Create output dir
+		 //Create output dir
 		  utility::createDir(net_, "output");
 
-		  // mini-batch per device
+		  // load weights
 		  if(start_epoch_ != 0){
 			  for(int i = 0; i < ndev_; i++){
 				  nets_[i]->load_weights(net_, start_epoch_);
+				  nets_[i]->set_epoch(start_epoch_);
 			  }
 		  }
 		  else{
@@ -77,12 +78,13 @@ public:
 		  }
 
 
-		  // Create Batch-loaders for Data with max chunkSize and shuffle
 		  iter::IIter<iter::DataChunk> * testIterator = iter::CreateIter(net_, cfg_, false);
 		  testIterator->Initalize();
 		  testIterator->StartIter(start_epoch_);
 
-		  //Cout logging
+		  double wall0 = utility::get_wall_time();
+
+
 		  std::cout << "Test: ";
 
 		  real_t nerr = 0;
@@ -94,20 +96,114 @@ public:
 			  //this->write_acts_(testIterator->Entry().Data);
 		  }
 
+		  //Print logloss/acc test and write to file
 		  real_t acc = (1.0 - (real_t)nerr/fullsize)*100;
 		  real_t loss = (-(real_t)logloss/fullsize);
 		  printf("%.2f%% ", acc);
-		  printf("logloss %.4f\n", loss);
+		  printf("logloss %.4f ", loss);
 
-
-		  //save acts and current weights.
-		  std::string holdoutfile = net_ + "output/holdout_";
+		  double wall1 = utility::get_wall_time();
+		  std::cout << "( " << wall1 - wall0 << "s )" << std::endl;
 
 		  delete testIterator;
 
-		}
 
 
+	}
+
+	void pred(){
+
+				  // load weights
+				  if(start_epoch_ != 0){
+					  for(int i = 0; i < ndev_; i++){
+						  nets_[i]->load_weights(net_, start_epoch_);
+					  }
+				  }
+
+
+
+				  iter::IIter<iter::DataChunk> * trainIterator = iter::CreateIter(net_, cfg_, true);
+				  trainIterator->Initalize();
+
+				  iter::IIter<iter::DataChunk> * testIterator = iter::CreateIter(net_, cfg_, false);
+				  testIterator->Initalize();
+
+				  //Epochs loop
+				  for (int i = start_epoch_; i <= epochs_; ++ i){
+
+
+					  real_t size = 0.0;
+					  real_t train_nerr = 0;
+					  real_t train_logloss = 0;
+					  double wall0 = utility::get_wall_time();
+
+					  //trainDataLoader.start_epoch(i);
+					  trainIterator->StartIter(i);
+					  testIterator->StartIter(i);
+
+					  int num_out = nets_[0]->get_outputdim();
+					  int step = batch_size_ / ndev_;
+
+					  while ( trainIterator->Next() ) {
+
+						  if ( trainIterator->Entry().Size() < batch_size_ ) continue;
+
+						 // running parallel threads
+						  #pragma omp parallel num_threads(ndev_) reduction(+:train_nerr,train_logloss)
+						  {
+							int tid = omp_get_thread_num();
+							mshadow::SetDevice<xpu>(devs_[tid]);
+
+							// temp output layer
+							TensorContainer<cpu, 2, real_t> pred;
+							pred.Resize(Shape2(step, num_out));
+							  //set epoch for updater
+							  nets_[tid]->set_epoch(i);
+							  // run forward
+							  nets_[tid]->Forward(trainIterator->Entry().Data.Slice(tid * step, (tid + 1) * step), pred, true);
+							  // run backprop
+							  //nets_[tid]->Backprop(&trainIterator->Entry().Labels[tid * step]);
+							  //evaluate prediction
+							  this->eval_pred_(pred, &trainIterator->Entry().Labels[tid * step], train_nerr, train_logloss);
+						  }
+
+						  size += trainIterator->Entry().Size();
+					  }
+
+					  real_t acc_train = (1.0 - (real_t)train_nerr/size)*100;
+					  real_t log_train = -(real_t)train_logloss/size;
+					  printf("Epoch: %i, Train: ", i);
+					  printf("%.2f%% ", acc_train);
+					  printf("logloss %.4f\n", log_train);
+
+					  std::cout << "Test: ";
+
+					  real_t nerr = 0;
+					  real_t logloss = 0;
+					  real_t fullsize = 0;
+					  while ( testIterator->Next() ) {
+						  this->predict_batch_(testIterator->Entry().Data, testIterator->Entry().Labels, nerr, logloss);
+						  fullsize += testIterator->Entry().Size();
+					  }
+
+					  //Print logloss/acc test and write to file
+					  real_t acc = (1.0 - (real_t)nerr/fullsize)*100;
+					  real_t loss = (-(real_t)logloss/fullsize);
+					  printf("%.2f%% ", acc);
+					  printf("logloss %.4f ", loss);
+
+
+
+					  double wall1 = utility::get_wall_time();
+					  std::cout << "( " << wall1 - wall0 << "s )" << std::endl;
+
+				  }
+
+				  delete trainIterator;
+				  delete testIterator;
+
+
+	}
 
 
 
