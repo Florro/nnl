@@ -10,7 +10,7 @@
 
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
-#include "RNGen.h"
+#include "../utility/RNGen.h"
 
 namespace cvimg{
 

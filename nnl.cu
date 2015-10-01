@@ -48,7 +48,7 @@ inline int Run(int argc, char *argv[]) {
   if(mode == "train"){
 	  mynntrainer->trainvalidate_batchwise( );
   }else if (mode == "predict"){
-	  mynntrainer->pred( );
+	  mynntrainer->predict( );
   }
   else{
 	  utility::Error("Unknown control parameter: %s, use train/predict", argv[argc-1]);

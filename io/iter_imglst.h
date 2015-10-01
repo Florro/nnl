@@ -15,7 +15,7 @@
 
 #include "../utility/util.h"
 #include "iter_base.h"
-#include "../utility/image_augmenter.h"
+#include "image_augmenter.h"
 #include "../utility/RNGen.h"
 #include "scheduler.h"
 #include <ctime>
@@ -126,9 +126,6 @@ private:
   /* Current chunk size */
   unsigned int mChunkSize_;
   
-  /* shuffle imglst */
-  bool mShuffle_;
-
   /* is training set */
   bool isTrain_;
   
@@ -161,7 +158,7 @@ private:
 };
 
 ImglstIter::ImglstIter(std::string net, const bool & isTrain) :
-		mShuffle_(false), isTrain_(isTrain), mIter_(0), mReadPos_(0), mPath_(""), net_(net), mScheduler_(NULL), nthread_(4) {
+		isTrain_(isTrain), mIter_(0), mReadPos_(0), mPath_(""), net_(net), mScheduler_(NULL), nthread_(4) {
 
 
 
@@ -203,7 +200,7 @@ void ImglstIter::Initalize(void) {
 
   
   // initalize random-seed
-  std::srand ( 0 ); //unsigned ( std::time(0) )
+  std::srand ( unsigned ( std::time(0) ) ); //unsigned ( std::time(0) )
   /* initalize scheduler for training */
   if ( isTrain_ ) mScheduler_ = new Scheduler();
 
@@ -212,7 +209,6 @@ void ImglstIter::Initalize(void) {
   {
 	  nthread_ = std::max(omp_get_num_procs() / 2 - 1, 1);
   }
-
   /* initalize image augmenter */
   for(int t = 0; t <= nthread_; t++){
 	  mIAs_.push_back(new cvimg::ImageAugmenter(augparameter_, isTrain_));
@@ -295,7 +291,7 @@ void ImglstIter::StartIter(const int & iter) {
   mSize_ = mImglst_.size();
   mChunkSize_ = std::min(maxChunkSize_, mSize_);
   /* Random shuffle reading order */
-  if ( mShuffle_ ) std::random_shuffle ( mImglst_.begin(), mImglst_.end() );
+  if ( isTrain_ ) std::random_shuffle ( mImglst_.begin(), mImglst_.end() );
 
   if(mIter_ == 0) std::cout << "current ChunkSize: " << mChunkSize_ << " max ChunkSize: " << maxChunkSize_ << " full size " << mSize_ << std::endl;
 }

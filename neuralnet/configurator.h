@@ -29,7 +29,7 @@
 
 #include "mshadow/tensor.h"
 #include "../utility/mshadow_op.h"
-#include "../utility/image_augmenter.h"
+#include "../io/image_augmenter.h"
 
 namespace configurator{
 

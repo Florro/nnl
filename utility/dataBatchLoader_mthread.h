@@ -9,7 +9,7 @@
 #define DATABATCHLOADER_MTHREAD_H_
 
 #include "mshadow/tensor.h"
-#include "../utility/image_augmenter.h"
+#include "../io/image_augmenter.h"
 #include "util.h"
 #include <algorithm>
 #include <cmath>
